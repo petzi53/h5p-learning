@@ -1,0 +1,331 @@
+# Ontario
+
+
+```{r label = "global-options", include=FALSE}
+
+### setting up working environment
+### for details see: https://yihui.name/knitr/options/
+knitr::opts_chunk$set(
+        collapse = T,
+        echo = F,
+        message = T,
+        error = T,
+        warning = T,
+        comment = '##',
+        highlight = T,
+        prompt = F,
+        strip.white = T,
+        tidy = T
+        )
+
+### installing and loading packages
+### https://www.tidyverse.org/
+if (!require("tidyverse"))
+        {install.packages("tidyverse", repos = 'http://cran.wu.ac.at/')
+        library(tidyverse)}
+
+### above command installed and loaded the core tidyverse packages:
+# ggplot2: data visualization
+# tibble:  a modern take on data frames
+# tidyr:   data tidying
+# readr:   data import (csv, tsv, fwf)
+# purrr:   functional R programming
+# dplyr:   data (frame) manipulation
+# stringr: string manipulation
+# forcats: working with categorical variables
+
+# I am going to use the `janitor` package for calculating table totals
+if (!require("janitor"))
+        {install.packages("janitor", repos = 'http://cran.wu.ac.at/')
+        library(janitor)}
+
+if (!require("reshape2"))
+        {install.packages("reshape2", repos = 'http://cran.wu.ac.at/')
+        library(reshape2)}
+
+### generate my theme
+my_theme <- theme_light() +
+        theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5)) +
+        theme(plot.background = element_rect(color = NA, fill = NA)) +
+        theme(plot.margin = margin(1, 0, 0, 0, unit = 'cm'))
+
+```
+
+
+
+
+```{r ct-all, fig.height = 7, fig.width=7}
+library(readODS)
+CT_all <- read_ods(
+    path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
+    sheet = 1
+    )
+CT_all[is.na(CT_all)] <- 0 # replace NA with 0
+colnames(CT_all) <- c("Content Type", "n")
+
+CT_all$row_num <- seq.int(nrow(CT_all))
+
+# plot1 <- ggplot(CT_all, aes(x=reorder(`Content Type`,-row_num), y=n)) + 
+#     geom_bar(stat="identity") +
+#     coord_flip() +
+#     my_theme +
+#     ggtitle("Distribution of H5P Content Types at the Ontario Repository (sorted alphabetically")
+# plot1
+
+plot2 <- ggplot(CT_all, aes(x=reorder(`Content Type`,n), y=n)) + 
+    geom_bar(stat="identity") +
+    coord_flip() +
+    my_theme +
+    xlab("H5P Content Type") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("Usage of H5P Content Types at the Ontario Repository") +
+    geom_text(aes(label=n), size=2.8, hjust=-0.2)
+plot2
+
+
+```
+```{r ct-subject}
+
+CT_subject <- read_ods(
+    path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
+    sheet = 2
+    )
+CT_subject[is.na(CT_subject)] <- 0 # replace NA with 0
+
+CT_subject <- adorn_totals(CT_subject, where = "row", fill = "-", na.rm = TRUE, name = "Total")
+
+Count_per_subject <- CT_subject[nrow(CT_subject) ,]
+Count_per_subject <-  melt(Count_per_subject, variable.name="Discipline", value.name="N")
+Count_per_subject <- Count_per_subject[, -1]
+
+disciplines = c("Business & Management", "The Arts", "Computing & IT", "Law", "Earth & Environment", "Health & Development", "History", "Language & Linguistics", "Literature", "Mathematics & Science", "Medicine & Nursing", "Philosophy & Religion", "Reference", "Society & Social Sciences", "Technology & Engineering")
+
+Count_per_subject$Discipline = disciplines
+
+# png(filename="count_per_subject1.png", width=600, height=500)
+plot3 <- ggplot(Count_per_subject, aes(x=reorder(Discipline, N), y = N)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    my_theme +
+    xlab("Discipline") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("Usage of H5P Content Types by Discipline at the Ontario Repository") +
+    geom_text(aes(label=N), size=3, hjust=-0.2)
+plot3
+# dev.off()
+
+
+```
+
+
+```{r ct-question-set, fig.height = 4, fig.width=7}
+
+sheetName <- list_ods_sheets("ontario_data/Questions-Set-2020-10-14.ods")
+i <- length(sheetName)
+for(i in 1:i){
+    assign(paste0("CT_QS_", sheetName[i]), {
+        read_ods(
+            path = "ontario_data/Questions-Set-2020-10-14.ods",
+            sheet = i)
+        }
+    )
+}
+
+id_vec <- CT_QS_Business$ID
+
+CT_QS_df <- data.frame(cbind(id_vec,
+           CT_QS_Business$Total,
+           CT_QS_Arts$Total,
+           CT_QS_IT$Total,
+           CT_QS_Law$Total,
+           CT_QS_Earth$Total,
+           CT_QS_Health$Total,
+           CT_QS_History$Total,
+           CT_QS_Language$Total,
+           CT_QS_Literature$Total,
+           CT_QS_Math$Total,
+           CT_QS_Medicine$Total,
+           CT_QS_Philosophy$Total,
+           CT_QS_Reference$Total,
+           CT_QS_Society$Total,
+           CT_QS_Technology$Total
+           ))
+
+CT_QS_df[is.na(CT_QS_df)] <- 0 # replace NA with 0
+colnames(CT_QS_df) <- c("ContentType", sheetName)
+
+CT_QS_df_long <- melt(CT_QS_df, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
+CT_QS_df_long$n <- as.integer(CT_QS_df_long$n)
+
+
+plot4 <- ggplot(CT_QS_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Question Set") +
+    ylab("Number of Content Types used within Question Sets") +
+    ggtitle("Usage of H5P Content Types within Question Sets by Disciplines at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    
+plot4
+
+plot5 <- ggplot(CT_QS_df_long, 
+                aes(x=Discipline, y=n, fill=ContentType)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Question Sets by Discipline") +
+    ylab("Number of Content Types used within Question Sets") +
+    ggtitle("Usage of H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+plot5
+
+
+```
+
+
+
+```{r ct-course-presentation, fig.height = 4, fig.width=7}
+
+sheetName <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
+i <- length(sheetName)
+for(i in 1:i){
+    assign(paste0("CT_CP_", sheetName[i]), {
+        read_ods(
+            path = "ontario_data/Course-Presentation-2020-10-15.ods",
+            sheet = i)
+        }
+    )
+}
+
+id_vec <- CT_CP_Business$ID
+
+CT_CP_df <- data.frame(cbind(id_vec,
+           CT_CP_Business$Total,
+           CT_CP_Arts$Total,
+           CT_CP_IT$Total,
+           CT_CP_Law$Total,
+           CT_CP_Earth$Total,
+           CT_CP_Health$Total,
+           CT_CP_History$Total,
+           CT_CP_Language$Total,
+           CT_CP_Literature$Total,
+           CT_CP_Math$Total,
+           CT_CP_Medicine$Total,
+           CT_CP_Philosophy$Total,
+           CT_CP_Reference$Total,
+           CT_CP_Society$Total,
+           CT_CP_Technology$Total
+           ))
+
+CT_CP_df[is.na(CT_CP_df)] <- 0 # replace NA with 0
+colnames(CT_CP_df) <- c("ContentType", sheetName)
+
+CT_CP_df_long <- melt(CT_CP_df, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
+CT_CP_df_long$n <- as.integer(CT_CP_df_long$n)
+
+
+plot6 <- ggplot(CT_CP_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Course Presentation") +
+    ylab("Number of Content Types used within Course Presentation") +
+    ggtitle("Usage of H5P Content Types in Course Presentation by Disciplines at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    
+plot6
+
+plot7 <- ggplot(CT_CP_df_long, 
+                aes(x=Discipline, y=n, fill=ContentType)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Course Presentation by Discipline") +
+    ylab("Number of Content Types used within Course Presentations") +
+    ggtitle("Usage of H5P Content Types within Course Presentation by Discipline at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+plot7
+
+
+```
+
+
+```{r ct-interactive-video, fig.height = 4, fig.width=7}
+
+sheetName <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
+i <- length(sheetName)
+for(i in 1:i){
+    assign(paste0("CT_IV_", sheetName[i]), {
+        read_ods(
+            path = "ontario_data/Interactive-Video-2020-10-16.ods",
+            sheet = i)
+        }
+    )
+}
+
+id_vec <- CT_IV_Business$ID
+
+CT_IV_df <- data.frame(cbind(id_vec,
+           CT_IV_Business$Total,
+           CT_IV_Arts$Total,
+           CT_IV_IT$Total,
+           CT_IV_Law$Total,
+           CT_IV_Earth$Total,
+           CT_IV_Health$Total,
+           CT_IV_History$Total,
+           CT_IV_Language$Total,
+           CT_IV_Literature$Total,
+           CT_IV_Math$Total,
+           CT_IV_Medicine$Total,
+           CT_IV_Philosophy$Total,
+           CT_IV_Reference$Total,
+           CT_IV_Society$Total,
+           CT_IV_Technology$Total
+           ))
+CT_IV_df[is.na(CT_IV_df)] <- 0 # replace NA with 0
+colnames(CT_IV_df) <- c("ContentType", sheetName)
+
+CT_IV_df_long <- melt(CT_IV_df, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
+CT_IV_df_long$n <- as.integer(CT_IV_df_long$n)
+
+
+plot8 <- ggplot(CT_IV_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Interactive Video") +
+    ylab("Number of Content Types used within Interactive Videon") +
+    ggtitle("Usage of H5P Content Types in Interactive Video by Disciplines at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    
+plot8
+
+plot9 <- ggplot(CT_IV_df_long, 
+                aes(x=Discipline, y=n, fill=ContentType)) +
+    geom_bar(stat="identity") +
+    # coord_flip() +
+    # guides(fill=guide_legend(reverse=TRUE))
+    my_theme +
+    xlab("H5P Content Types used within Interactive Video by Discipline") +
+    ylab("Number of Content Types used within Interactive Video") +
+    ggtitle("Usage of H5P Content Types within Interactive Video by Discipline at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+plot9
+
+
+```
