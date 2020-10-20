@@ -1,5 +1,6 @@
 # Ontario
 
+## Research questions
 
 ```{r label = "global-options", include=FALSE}
 
@@ -51,7 +52,7 @@ my_theme <- theme_light() +
 
 ```
 
-
+## Overall distribution of H5P content types
 
 
 ```{r ct-all, fig.height = 7, fig.width=7}
@@ -76,14 +77,17 @@ plot2 <- ggplot(CT_all, aes(x=reorder(`Content Type`,n), y=n)) +
     geom_bar(stat="identity") +
     coord_flip() +
     my_theme +
-    xlab("H5P Content Type") +
-    ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("Usage of H5P Content Types at the Ontario Repository") +
+    xlab("Name of H5P Content Types") +
+    ylab("Number of Content Types") +
+    ggtitle("Distribution of H5P Stand-alone Content Types 
+            in the Ontario Repository (2020-10-13)") +
     geom_text(aes(label=n), size=2.8, hjust=-0.2)
 plot2
 
 
 ```
+## Distribution by discipline
+
 ```{r ct-subject}
 
 CT_subject <- read_ods(
@@ -92,9 +96,9 @@ CT_subject <- read_ods(
     )
 CT_subject[is.na(CT_subject)] <- 0 # replace NA with 0
 
-CT_subject <- adorn_totals(CT_subject, where = "row", fill = "-", na.rm = TRUE, name = "Total")
+CT_subject_sums <- adorn_totals(CT_subject, where = "row", fill = "-", na.rm = TRUE, name = "Total")
 
-Count_per_subject <- CT_subject[nrow(CT_subject) ,]
+Count_per_subject <- CT_subject_sums[nrow(CT_subject_sums) ,]
 Count_per_subject <-  melt(Count_per_subject, variable.name="Discipline", value.name="N")
 Count_per_subject <- Count_per_subject[, -1]
 
@@ -117,6 +121,7 @@ plot3
 
 ```
 
+## Distribution in Question Sets
 
 ```{r ct-question-set, fig.height = 4, fig.width=7}
 
@@ -188,6 +193,7 @@ plot5
 
 ```
 
+## Distribution in Course Presentations
 
 
 ```{r ct-course-presentation, fig.height = 4, fig.width=7}
@@ -259,7 +265,7 @@ plot7
 
 
 ```
-
+## Distribution in Interactive Video
 
 ```{r ct-interactive-video, fig.height = 4, fig.width=7}
 
@@ -329,3 +335,169 @@ plot9
 
 
 ```
+
+## Converting strings to numeric data
+
+```{r convert-chr-to-num}
+
+i <- c(2:16)                                  # Specify columns you want to change
+
+CT_QS_df[ , i] <- apply(CT_QS_df[ , i], 2,    # Specify own function within apply
+                    function(x) as.numeric(x))  
+CT_CP_df[ , i] <- apply(CT_CP_df[ , i], 2,    # Specify own function within apply
+                    function(x) as.numeric(x))
+CT_IV_df[ , i] <- apply(CT_IV_df[ , i], 2,    # Specify own function within apply
+                    function(x) as.numeric(x))
+```
+
+
+
+## Summarising compound content types
+
+```{r db_totals}
+
+CT_QS_sums <- adorn_totals(CT_QS_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+CT_CP_sums <- adorn_totals(CT_CP_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+CT_IV_sums <- adorn_totals(CT_IV_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+```
+
+## Add values from compound content types to CT_all 
+
+
+```{r total-ct-with-compounds}
+
+### add column to CT_all
+CT_all["Compounds"] <-  0L 
+
+### create df with only rows of Name and Total (easier to check)
+CP_sums <- CT_CP_sums[, c(1,17)]
+IV_sums <- CT_IV_sums[, c(1,17)]
+QS_sums <- CT_QS_sums[, c(1,17)]
+
+
+######### start with the calculation and transfer of the values
+
+### Dialog Cards (CP)
+CT_all[11,4] <-  CP_sums[2,2]
+
+
+### Drag and Drop (QS, CP, IV)
+compound_drag_drop <- bind_rows( filter(CT_QS_df, ContentType == "Drag and Drop"),
+                        filter(CT_CP_df, ContentType == "Drag and Drop"),
+                        filter(CT_IV_df, ContentType == "Drag and Drop"))
+compound_drag_drop <- adorn_totals(compound_drag_drop, where = c("row","col"), 
+                                   fill = "-", na.rm = TRUE, name = "Total")
+CT_all[14,4] <-  compound_drag_drop[4,17]
+
+### Drag Text (all 3)
+compound_drag_text <- bind_rows(filter(CT_QS_df, ContentType == "Drag Text"),
+          filter(CT_CP_df, ContentType == "Drag Text"),
+          filter(CT_IV_df, ContentType == "Drag Text"))
+compound_drag_text <- adorn_totals(compound_drag_text, where = c("row","col"), 
+                                   fill = "-", na.rm = TRUE, name = "Total")
+CT_all[15,4] <-  compound_drag_text[4,17]
+
+
+### Essay (IV, QS)
+compound_essay <- bind_rows(filter(CT_QS_df, ContentType == "Essay"),
+          filter(CT_IV_df, ContentType == "Essay"))
+compound_essay <- adorn_totals(compound_essay, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[16,4] <-  compound_essay[3,17]
+
+### Fill in the Blanks (all 3)
+compound_fill_blanks <- bind_rows(filter(CT_QS_df, ContentType == "Fill in the Blanks"),
+          filter(CT_CP_df, ContentType == "Fill in the Blanks"),
+          filter(CT_IV_df, ContentType == "Fill in the Blanks"))
+compound_fill_blanks <- adorn_totals(compound_fill_blanks, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[17,4] <-  compound_fill_blanks[4,17]
+
+### Image Hotspots (IV)
+CT_all[24,4] <-  IV_sums[5,2]
+
+### Interactive Video (CP)
+CT_all[31,4] <-  CP_sums[7,2]
+
+### Mark the Words (all 3)
+compound_mark_words <- bind_rows(filter(CT_QS_df, ContentType == "Mark the Words"),
+          filter(CT_CP_df, ContentType == "Mark the Words"),
+          filter(CT_IV_df, ContentType == "Mark the Words"))
+compound_mark_words <- adorn_totals(compound_mark_words, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[33,4] <-  compound_mark_words[4,17]
+
+### Multiple Choice (all 3)
+compound_multiple_choice <- bind_rows(filter(CT_QS_df, ContentType == "Multiple Choice"),
+          filter(CT_CP_df, ContentType == "Multiple Choice"),
+          filter(CT_IV_df, ContentType == "Multiple Choice"))
+compound_multiple_choice <- adorn_totals(compound_multiple_choice, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[35,4] <-  compound_multiple_choice[4,17]
+
+### Questionnaire (IV)
+CT_all[37,4] <- IV_sums[8,2]
+
+### Single Choice Set (CP, IV)
+compound_single_choice <- bind_rows(filter(CT_CP_df, ContentType == "Single Choice Set"),
+          filter(CT_IV_df, ContentType == "Single Choice Set"))
+compound_single_choice <- adorn_totals(compound_single_choice, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[39,4] <-  compound_single_choice[3,17]
+
+### Summary (CP, IV)
+compound_summary <- bind_rows(filter(CT_CP_df, ContentType == "Summary"),
+          filter(CT_IV_df, ContentType == "Summary"))
+compound_summary <- adorn_totals(compound_summary, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[42,4] <-  compound_summary[3,17]
+
+### True/False Question (all 3)
+compound_true_false <- bind_rows(filter(CT_QS_df, ContentType == "True/False Question"),
+          filter(CT_CP_df, ContentType == "True/False Question"),
+          filter(CT_IV_df, ContentType == "True/False Question"))
+compound_true_false <- adorn_totals(compound_true_false, where = c("row","col"), 
+                               fill = "-", na.rm = TRUE, name = "Total")
+CT_all[44,4] <-  compound_true_false[4,17]
+
+
+### Calculate new total
+CT_all <- CT_all %>% 
+    select(-row_num) %>% 
+    mutate(Total = n + Compounds)
+
+
+```
+
+```{r ct_all_compounds, fig.height = 7, fig.width=7}
+plot10 <- ggplot(CT_all, aes(x=reorder(`Content Type`,Total), y=Total)) + 
+    geom_bar(stat="identity") +
+    coord_flip() +
+    my_theme +
+    xlab("Name of H5P Content Types") +
+    ylab("Number of all Content Types (Stand-alone and Compound)") +
+    ggtitle("Distribution of all H5P Content Types (Stand-alone and Compound)
+            in the Ontario Repository (2020-10-13)") +
+    geom_text(aes(label=Total), size=2.8, hjust=-0.2)
+plot10
+```
+
+## Discipline all
+
+```{r ct-disciplines-all}
+
+CT_subject_compounds <- bind_rows(CT_QS_df, CT_CP_df, CT_IV_df)
+CT_subject_stand_alone <- rename(CT_subject, ContentType = Name)
+CT_subject_all <- bind_rows(CT_subject_stand_alone, CT_QS_df, CT_CP_df, CT_IV_df)
+CT_subject_all_sums <- adorn_totals(CT_subject_all, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+
+```
+
+
+## Some preliminiary data for a blog entry
+
+```{r blog-data}
+sum(CT_all$n)
+sum(CT_all$Total)
+```
+
