@@ -44,151 +44,139 @@ if (!require("reshape2"))
         {install.packages("reshape2", repos = 'http://cran.wu.ac.at/')
         library(reshape2)}
 
+if (!require("readODS"))
+        {install.packages("readODS", repos = 'http://cran.wu.ac.at/')
+        library(readODS)}
+
 ### generate my theme
 my_theme <- theme_light() +
         theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5)) +
         theme(plot.background = element_rect(color = NA, fill = NA)) +
         theme(plot.margin = margin(1, 0, 0, 0, unit = 'cm'))
 
+### global variables
+
+disciplines_short = c("Business", "Arts", "IT", "Law", "Earth", "Health", "History", "Language", "Literature", "Math", "Medicine", "Philosophy", "Reference", "Society", "Technology")
+
+disciplines = c("Business & Management", "The Arts", "Computing & IT", "Law", "Earth & Environment", "Health & Development", "History", "Language & Linguistics", "Literature", "Mathematics & Science", "Medicine & Nursing", "Philosophy & Religion", "Reference", "Society & Social Sciences", "Technology & Engineering")
+
 ```
 
-## Overall distribution of H5P content types
+## Stand-alone distribution of H5P content types
 
 
-```{r ct-all, fig.height = 7, fig.width=7}
+```{r ct-stand-alone}
+
+#read data
 library(readODS)
-CT_all <- read_ods(
+CT_sa_type <- read_ods(
     path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
-    sheet = 1
+    sheet = 2,
     )
-CT_all[is.na(CT_all)] <- 0 # replace NA with 0
-colnames(CT_all) <- c("Content Type", "n")
 
-CT_all$row_num <- seq.int(nrow(CT_all))
-
-# plot1 <- ggplot(CT_all, aes(x=reorder(`Content Type`,-row_num), y=n)) + 
-#     geom_bar(stat="identity") +
-#     coord_flip() +
-#     my_theme +
-#     ggtitle("Distribution of H5P Content Types at the Ontario Repository (sorted alphabetically")
-# plot1
-
-plot2 <- ggplot(CT_all, aes(x=reorder(`Content Type`,n), y=n)) + 
-    geom_bar(stat="identity") +
+ggplot(CT_sa_type, aes(x=reorder(`ContentType`, Overall), y=Overall)) + 
+    geom_bar(stat="identity", width = .8) +
     coord_flip() +
     my_theme +
     xlab("Name of H5P Content Types") +
     ylab("Number of Content Types") +
-    ggtitle("Distribution of H5P Stand-alone Content Types 
-            in the Ontario Repository (2020-10-13)") +
-    geom_text(aes(label=n), size=2.8, hjust=-0.2)
-plot2
+    ggtitle("Distribution of H5P Stand-alone Content Types in the Ontario Repository (2020-10-13)") +
+    geom_text(aes(label=Overall), size=2.8, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12))
 
-
-```
-## Distribution by discipline
-
-```{r ct-subject}
-
-CT_subject <- read_ods(
-    path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
-    sheet = 2
+ggsave("ontario_plots/CT_sa_type.pdf",
+    width = 8,
+    height = 8
     )
-CT_subject[is.na(CT_subject)] <- 0 # replace NA with 0
 
-CT_subject_sums <- adorn_totals(CT_subject, where = "row", fill = "-", na.rm = TRUE, name = "Total")
+#############
 
-Count_per_subject <- CT_subject_sums[nrow(CT_subject_sums) ,]
-Count_per_subject <-  melt(Count_per_subject, variable.name="Discipline", value.name="N")
-Count_per_subject <- Count_per_subject[, -1]
+# calculate and prepare graph for content types by discipline
 
-disciplines = c("Business & Management", "The Arts", "Computing & IT", "Law", "Earth & Environment", "Health & Development", "History", "Language & Linguistics", "Literature", "Mathematics & Science", "Medicine & Nursing", "Philosophy & Religion", "Reference", "Society & Social Sciences", "Technology & Engineering")
+CT_sa_subject <- adorn_totals(CT_sa, where = "row", 
+                                       fill = "-", na.rm = TRUE, name = "Total")      # add totals to rows
+CT_sa_subject <- CT_sa_subject[nrow(CT_sa_subject) ,]                                 # get last row (= Total)
+CT_sa_subject <-  melt(CT_sa_subject, variable.name="Discipline", value.name="Total") # convert to long
+CT_sa_subject <- CT_sa_subject[, -1]                                                  # delete first column
+CT_sa_subject$Discipline = disciplines                                                # use full names
 
-Count_per_subject$Discipline = disciplines
-
-# png(filename="count_per_subject1.png", width=600, height=500)
-plot3 <- ggplot(Count_per_subject, aes(x=reorder(Discipline, N), y = N)) +
+ggplot(CT_sa_subject, aes(x=reorder(Discipline, Total), y = Total)) +
     geom_bar(stat="identity") +
     coord_flip() +
     my_theme +
     xlab("Discipline") +
     ylab("Number of Content Types in the Ontario Repository") +
     ggtitle("Usage of H5P Content Types by Discipline at the Ontario Repository") +
-    geom_text(aes(label=N), size=3, hjust=-0.2)
-plot3
-# dev.off()
+    geom_text(aes(label=Total), size=3, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12))
+
+ggsave(    
+    filename = "ontario_plots/CT_sa_subject.pdf",
+    width = 10,
+    height = 5
+    )
 
 
 ```
+
+
 
 ## Distribution in Question Sets
 
 ```{r ct-question-set, fig.height = 4, fig.width=7}
 
-sheetName <- list_ods_sheets("ontario_data/Questions-Set-2020-10-14.ods")
-i <- length(sheetName)
+CT.QS <- c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Mark the Words", 
+           "Multiple Choice", "True/False Question")
+df.QS <- data.frame(CT.QS)
+
+sheetNames <- list_ods_sheets("ontario_data/Questions-Set-2020-10-14.ods")
+i <- length(sheetNames)
 for(i in 1:i){
-    assign(paste0("CT_QS_", sheetName[i]), {
-        read_ods(
-            path = "ontario_data/Questions-Set-2020-10-14.ods",
-            sheet = i)
-        }
-    )
+    df_temp <- read_ods(
+                        path = "ontario_data/Questions-Set-2020-10-14.ods",
+                        sheet = i)
+    
+### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
+    df.QS <- bind_cols(df.QS, as.data.frame(df_temp[, ncol(df_temp)]))  
 }
+### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
+names(df.QS) <-  c("CT.QS", sheetNames)
 
-id_vec <- CT_QS_Business$ID
-
-CT_QS_df <- data.frame(cbind(id_vec,
-           CT_QS_Business$Total,
-           CT_QS_Arts$Total,
-           CT_QS_IT$Total,
-           CT_QS_Law$Total,
-           CT_QS_Earth$Total,
-           CT_QS_Health$Total,
-           CT_QS_History$Total,
-           CT_QS_Language$Total,
-           CT_QS_Literature$Total,
-           CT_QS_Math$Total,
-           CT_QS_Medicine$Total,
-           CT_QS_Philosophy$Total,
-           CT_QS_Reference$Total,
-           CT_QS_Society$Total,
-           CT_QS_Technology$Total
-           ))
-
-CT_QS_df[is.na(CT_QS_df)] <- 0 # replace NA with 0
-colnames(CT_QS_df) <- c("ContentType", sheetName)
-
-CT_QS_df_long <- melt(CT_QS_df, 
-                      id.vars = "ContentType",
+df.QS_long <- melt(df.QS, 
+                      id.vars = "CT.QS",
                       variable.name = "Discipline",
                       value.name = "n")
-CT_QS_df_long$n <- as.integer(CT_QS_df_long$n)
 
-
-plot4 <- ggplot(CT_QS_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+ggplot(df.QS_long, aes(x=CT.QS, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
-    xlab("H5P Content Types used within Question Set") +
+    xlab("H5P Content Types used within Question Sets") +
     ylab("Number of Content Types used within Question Sets") +
-    ggtitle("Usage of H5P Content Types within Question Sets by Disciplines at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    ggtitle("Usage of H5P Content Types within Question Sets at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
     
-plot4
+ggsave(    
+    filename = "ontario_plots/CT_QS_type.pdf",
+    width = 10,
+    height = 5
+    )
 
-plot5 <- ggplot(CT_QS_df_long, 
-                aes(x=Discipline, y=n, fill=ContentType)) +
+ggplot(df.QS_long, aes(x=Discipline, y=n, fill=CT.QS)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
     xlab("H5P Content Types used within Question Sets by Discipline") +
     ylab("Number of Content Types used within Question Sets") +
-    ggtitle("Usage of H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
-plot5
+    ggtitle("H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
+    scale_fill_discrete(name = "Content Types in 
+Question Sets") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
+ggsave(    
+    filename = "ontario_plots/CT_QS_subject.pdf",
+    width = 10,
+    height = 5
+    )
 
 
 ```
@@ -198,279 +186,253 @@ plot5
 
 ```{r ct-course-presentation, fig.height = 4, fig.width=7}
 
-sheetName <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
-i <- length(sheetName)
+
+CT.CP <-  c("Dialog Cards", "Drag and Drop", "Drag Text", "Fill in the Blanks", "Interactive Video", 
+            "Mark the Words", "Multiple Choice", "Single Choice Set", "Summary", "True/False Question")
+df.CP <- data.frame(CT.CP)
+
+sheetNames <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
+i <- length(sheetNames)
 for(i in 1:i){
-    assign(paste0("CT_CP_", sheetName[i]), {
-        read_ods(
-            path = "ontario_data/Course-Presentation-2020-10-15.ods",
-            sheet = i)
-        }
-    )
+    df_temp <- read_ods(
+                        path = "ontario_data/Course-Presentation-2020-10-15.ods",
+                        sheet = i)
+    
+### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
+    df.CP <- bind_cols(df.CP, as.data.frame(df_temp[, ncol(df_temp)]))  
 }
+### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
+names(df.CP) <-  c("CT.CP", sheetNames)
 
-id_vec <- CT_CP_Business$ID
-
-CT_CP_df <- data.frame(cbind(id_vec,
-           CT_CP_Business$Total,
-           CT_CP_Arts$Total,
-           CT_CP_IT$Total,
-           CT_CP_Law$Total,
-           CT_CP_Earth$Total,
-           CT_CP_Health$Total,
-           CT_CP_History$Total,
-           CT_CP_Language$Total,
-           CT_CP_Literature$Total,
-           CT_CP_Math$Total,
-           CT_CP_Medicine$Total,
-           CT_CP_Philosophy$Total,
-           CT_CP_Reference$Total,
-           CT_CP_Society$Total,
-           CT_CP_Technology$Total
-           ))
-
-CT_CP_df[is.na(CT_CP_df)] <- 0 # replace NA with 0
-colnames(CT_CP_df) <- c("ContentType", sheetName)
-
-CT_CP_df_long <- melt(CT_CP_df, 
-                      id.vars = "ContentType",
+df.CP_long <- melt(df.CP, 
+                      id.vars = "CT.CP",
                       variable.name = "Discipline",
                       value.name = "n")
-CT_CP_df_long$n <- as.integer(CT_CP_df_long$n)
 
-
-plot6 <- ggplot(CT_CP_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+ggplot(df.CP_long, aes(x=CT.CP, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
     xlab("H5P Content Types used within Course Presentation") +
     ylab("Number of Content Types used within Course Presentation") +
-    ggtitle("Usage of H5P Content Types in Course Presentation by Disciplines at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    ggtitle("Usage of H5P Content Types within Course Presentation at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
     
-plot6
+ggsave(    
+    filename = "ontario_plots/CT_CP_type.pdf",
+    width = 10,
+    height = 5
+    )
 
-plot7 <- ggplot(CT_CP_df_long, 
-                aes(x=Discipline, y=n, fill=ContentType)) +
+ggplot(df.CP_long, aes(x=Discipline, y=n, fill=CT.CP)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
     xlab("H5P Content Types used within Course Presentation by Discipline") +
-    ylab("Number of Content Types used within Course Presentations") +
-    ggtitle("Usage of H5P Content Types within Course Presentation by Discipline at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
-plot7
+    ylab("Number of Content Types used within Course Presentation") +
+    ggtitle("H5P Content Types within Course Presentation by Discipline at the Ontario Repository") +
+    scale_fill_discrete(name = "Content Types in 
+Course Presentation") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
+ggsave(    
+    filename = "ontario_plots/CT_CP_subject.pdf",
+    width = 10,
+    height = 5
+    )
 
 
 ```
+
 ## Distribution in Interactive Video
+
 
 ```{r ct-interactive-video, fig.height = 4, fig.width=7}
 
-sheetName <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
-i <- length(sheetName)
+
+CT.IV <-  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image Hotspots", 
+            "Mark the Words", "Multiple Choice", "Questionnaire", "Single Choice Set", 
+            "Summary", "True/False Question")
+df.IV <- data.frame(CT.IV)
+
+sheetNames <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
+i <- length(sheetNames)
 for(i in 1:i){
-    assign(paste0("CT_IV_", sheetName[i]), {
-        read_ods(
-            path = "ontario_data/Interactive-Video-2020-10-16.ods",
-            sheet = i)
-        }
-    )
+    df_temp <- read_ods(
+                        path = "ontario_data/Interactive-Video-2020-10-16.ods",
+                        sheet = i)
+    
+### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
+    df.IV <- bind_cols(df.IV, as.data.frame(df_temp[, ncol(df_temp)]))  
 }
+### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
+names(df.IV) <-  c("CT.IV", sheetNames)
 
-id_vec <- CT_IV_Business$ID
-
-CT_IV_df <- data.frame(cbind(id_vec,
-           CT_IV_Business$Total,
-           CT_IV_Arts$Total,
-           CT_IV_IT$Total,
-           CT_IV_Law$Total,
-           CT_IV_Earth$Total,
-           CT_IV_Health$Total,
-           CT_IV_History$Total,
-           CT_IV_Language$Total,
-           CT_IV_Literature$Total,
-           CT_IV_Math$Total,
-           CT_IV_Medicine$Total,
-           CT_IV_Philosophy$Total,
-           CT_IV_Reference$Total,
-           CT_IV_Society$Total,
-           CT_IV_Technology$Total
-           ))
-CT_IV_df[is.na(CT_IV_df)] <- 0 # replace NA with 0
-colnames(CT_IV_df) <- c("ContentType", sheetName)
-
-CT_IV_df_long <- melt(CT_IV_df, 
-                      id.vars = "ContentType",
+df.IV_long <- melt(df.IV, 
+                      id.vars = "CT.IV",
                       variable.name = "Discipline",
                       value.name = "n")
-CT_IV_df_long$n <- as.integer(CT_IV_df_long$n)
 
-
-plot8 <- ggplot(CT_IV_df_long, aes(x=ContentType, y=n, fill=Discipline)) +
+ggplot(df.IV_long, aes(x=CT.IV, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
     xlab("H5P Content Types used within Interactive Video") +
-    ylab("Number of Content Types used within Interactive Videon") +
-    ggtitle("Usage of H5P Content Types in Interactive Video by Disciplines at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
+    ylab("Number of Content Types used within Interactive Video") +
+    ggtitle("Usage of H5P Content Types within Interactive Video at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
     
-plot8
+ggsave(    
+    filename = "ontario_plots/CT_IV_type.pdf",
+    width = 10,
+    height = 5
+    )
 
-plot9 <- ggplot(CT_IV_df_long, 
-                aes(x=Discipline, y=n, fill=ContentType)) +
+ggplot(df.IV_long, aes(x=Discipline, y=n, fill=CT.IV)) +
     geom_bar(stat="identity") +
-    # coord_flip() +
-    # guides(fill=guide_legend(reverse=TRUE))
     my_theme +
     xlab("H5P Content Types used within Interactive Video by Discipline") +
     ylab("Number of Content Types used within Interactive Video") +
-    ggtitle("Usage of H5P Content Types within Interactive Video by Discipline at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1 ))
-plot9
+    ggtitle("H5P Content Types within Interactive Video by Discipline at the Ontario Repository") +
+    scale_fill_discrete(name = "Content Types in 
+Interactive Video") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
+ggsave(    
+    filename = "ontario_plots/CT_IV_subject.pdf",
+    width = 10,
+    height = 5
+    )
 
 
 ```
-
-## Converting strings to numeric data
-
-```{r convert-chr-to-num}
-
-i <- c(2:16)                                  # Specify columns you want to change
-
-CT_QS_df[ , i] <- apply(CT_QS_df[ , i], 2,    # Specify own function within apply
-                    function(x) as.numeric(x))  
-CT_CP_df[ , i] <- apply(CT_CP_df[ , i], 2,    # Specify own function within apply
-                    function(x) as.numeric(x))
-CT_IV_df[ , i] <- apply(CT_IV_df[ , i], 2,    # Specify own function within apply
-                    function(x) as.numeric(x))
-```
-
 
 
 ## Summarising compound content types
 
-```{r db_totals}
-
-CT_QS_sums <- adorn_totals(CT_QS_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
-CT_CP_sums <- adorn_totals(CT_CP_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
-CT_IV_sums <- adorn_totals(CT_IV_df, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+```{r df_totals}
+df_compounds <- list(df.QS,df.CP,df.IV)
+df_sums_compounds <- list(df.QS,df.CP,df.IV)
+df_sums_compounds <- adorn_totals(df_compounds, c("row","col"))
+# df.QS.sums <- adorn_totals(df.QS, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+# df.CP.sums <- adorn_totals(df.CP, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+# df.IV.sums <- adorn_totals(df.IV, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
 ```
 
 ## Add values from compound content types to CT_all 
 
 
-```{r total-ct-with-compounds}
+```{r total-ct-with-compounds-new}
 
-### add column to CT_all
-CT_all["Compounds"] <-  0L 
 
-### create df with only rows of Name and Total (easier to check)
-CP_sums <- CT_CP_sums[, c(1,17)]
-IV_sums <- CT_IV_sums[, c(1,17)]
-QS_sums <- CT_QS_sums[, c(1,17)]
 
+CT_all <- CT_sa_type[, c(1,17)]   # copy CT_sa Name and Total to new df
+CT_all["Compounds"] <-  0L        # add cnew olumn to CT_all
+
+# ### create df with only rows of Name and Total (easier to check)
+# QS_sums <- df.QS.sums[, c(1,17)]
+# CP_sums <- df.CP.sums[, c(1,17)]
+# IV_sums <- df.IV.sums[, c(1,17)]
+names(df.QS)[1] <- c("ContentType")
+names(df.CP)[1] <- c("ContentType")
+names(df.IV)[1] <- c("ContentType")
 
 ######### start with the calculation and transfer of the values
 
 ### Dialog Cards (CP)
-CT_all[11,4] <-  CP_sums[2,2]
+CT_all[11,3] <-  df.CP.sums[1,17]
 
 
 ### Drag and Drop (QS, CP, IV)
-compound_drag_drop <- bind_rows( filter(CT_QS_df, ContentType == "Drag and Drop"),
-                        filter(CT_CP_df, ContentType == "Drag and Drop"),
-                        filter(CT_IV_df, ContentType == "Drag and Drop"))
-compound_drag_drop <- adorn_totals(compound_drag_drop, where = c("row","col"), 
+compound_drag_drop <- bind_rows( filter(df.QS, ContentType == "Drag and Drop"),
+                        filter(df.CP, ContentType == "Drag and Drop"),
+                        filter(df.IV, ContentType == "Drag and Drop"))
+compound_drag_drop <- adorn_totals(compound_drag_drop, c("row","col"), 
                                    fill = "-", na.rm = TRUE, name = "Total")
-CT_all[14,4] <-  compound_drag_drop[4,17]
+CT_all[14,3] <-  compound_drag_drop[4,17]
 
 ### Drag Text (all 3)
-compound_drag_text <- bind_rows(filter(CT_QS_df, ContentType == "Drag Text"),
-          filter(CT_CP_df, ContentType == "Drag Text"),
-          filter(CT_IV_df, ContentType == "Drag Text"))
+compound_drag_text <- bind_rows(filter(df.QS, ContentType == "Drag Text"),
+          filter(df.CP, ContentType == "Drag Text"),
+          filter(df.IV, ContentType == "Drag Text"))
 compound_drag_text <- adorn_totals(compound_drag_text, where = c("row","col"), 
                                    fill = "-", na.rm = TRUE, name = "Total")
-CT_all[15,4] <-  compound_drag_text[4,17]
+CT_all[15,3] <-  compound_drag_text[4,17]
 
 
 ### Essay (IV, QS)
-compound_essay <- bind_rows(filter(CT_QS_df, ContentType == "Essay"),
-          filter(CT_IV_df, ContentType == "Essay"))
+compound_essay <- bind_rows(filter(df.QS, ContentType == "Essay"),
+          filter(df.IV, ContentType == "Essay"))
 compound_essay <- adorn_totals(compound_essay, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[16,4] <-  compound_essay[3,17]
+CT_all[16,3] <-  compound_essay[3,17]
 
 ### Fill in the Blanks (all 3)
-compound_fill_blanks <- bind_rows(filter(CT_QS_df, ContentType == "Fill in the Blanks"),
-          filter(CT_CP_df, ContentType == "Fill in the Blanks"),
-          filter(CT_IV_df, ContentType == "Fill in the Blanks"))
+compound_fill_blanks <- bind_rows(filter(df.QS, ContentType == "Fill in the Blanks"),
+          filter(df.CP, ContentType == "Fill in the Blanks"),
+          filter(df.IV, ContentType == "Fill in the Blanks"))
 compound_fill_blanks <- adorn_totals(compound_fill_blanks, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[17,4] <-  compound_fill_blanks[4,17]
+CT_all[17,3] <-  compound_fill_blanks[4,17]
 
 ### Image Hotspots (IV)
-CT_all[24,4] <-  IV_sums[5,2]
+CT_all[24,3] <-  df.IV.sums[5,17]
 
 ### Interactive Video (CP)
-CT_all[31,4] <-  CP_sums[7,2]
+CT_all[31,3] <-  df.CP.sums[7,17]
 
 ### Mark the Words (all 3)
-compound_mark_words <- bind_rows(filter(CT_QS_df, ContentType == "Mark the Words"),
-          filter(CT_CP_df, ContentType == "Mark the Words"),
-          filter(CT_IV_df, ContentType == "Mark the Words"))
+compound_mark_words <- bind_rows(filter(df.QS, ContentType == "Mark the Words"),
+          filter(df.CP, ContentType == "Mark the Words"),
+          filter(df.IV, ContentType == "Mark the Words"))
 compound_mark_words <- adorn_totals(compound_mark_words, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[33,4] <-  compound_mark_words[4,17]
+CT_all[33,3] <-  compound_mark_words[4,17]
 
 ### Multiple Choice (all 3)
-compound_multiple_choice <- bind_rows(filter(CT_QS_df, ContentType == "Multiple Choice"),
-          filter(CT_CP_df, ContentType == "Multiple Choice"),
-          filter(CT_IV_df, ContentType == "Multiple Choice"))
+compound_multiple_choice <- bind_rows(filter(df.QS, ContentType == "Multiple Choice"),
+          filter(df.CP, ContentType == "Multiple Choice"),
+          filter(df.IV, ContentType == "Multiple Choice"))
 compound_multiple_choice <- adorn_totals(compound_multiple_choice, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[35,4] <-  compound_multiple_choice[4,17]
+CT_all[35,3] <-  compound_multiple_choice[4,17]
 
 ### Questionnaire (IV)
-CT_all[37,4] <- IV_sums[8,2]
+CT_all[37,3] <- df.IV.sums[8,17]
 
 ### Single Choice Set (CP, IV)
-compound_single_choice <- bind_rows(filter(CT_CP_df, ContentType == "Single Choice Set"),
-          filter(CT_IV_df, ContentType == "Single Choice Set"))
+compound_single_choice <- bind_rows(filter(df.CP, ContentType == "Single Choice Set"),
+          filter(df.IV, ContentType == "Single Choice Set"))
 compound_single_choice <- adorn_totals(compound_single_choice, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[39,4] <-  compound_single_choice[3,17]
+CT_all[39,3] <-  compound_single_choice[3,17]
 
 ### Summary (CP, IV)
-compound_summary <- bind_rows(filter(CT_CP_df, ContentType == "Summary"),
-          filter(CT_IV_df, ContentType == "Summary"))
+compound_summary <- bind_rows(filter(df.CP, ContentType == "Summary"),
+          filter(df.IV, ContentType == "Summary"))
 compound_summary <- adorn_totals(compound_summary, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[42,4] <-  compound_summary[3,17]
+CT_all[42,3] <-  compound_summary[3,17]
 
 ### True/False Question (all 3)
-compound_true_false <- bind_rows(filter(CT_QS_df, ContentType == "True/False Question"),
-          filter(CT_CP_df, ContentType == "True/False Question"),
-          filter(CT_IV_df, ContentType == "True/False Question"))
+compound_true_false <- bind_rows(filter(df.QS, ContentType == "True/False Question"),
+          filter(df.CP, ContentType == "True/False Question"),
+          filter(df.IV, ContentType == "True/False Question"))
 compound_true_false <- adorn_totals(compound_true_false, where = c("row","col"), 
                                fill = "-", na.rm = TRUE, name = "Total")
-CT_all[44,4] <-  compound_true_false[4,17]
+CT_all[44,3] <-  compound_true_false[4,17]
 
 
 ### Calculate new total
 CT_all <- CT_all %>% 
-    select(-row_num) %>% 
-    mutate(Total = n + Compounds)
+    mutate(All = Total + Compounds)
 
 
 ```
 
+
+
 ```{r ct_all_compounds, fig.height = 7, fig.width=7}
-plot10 <- ggplot(CT_all, aes(x=reorder(`Content Type`,Total), y=Total)) + 
+ggplot(CT_all, aes(x=reorder(ContentType,All), y=All)) + 
     geom_bar(stat="identity") +
     coord_flip() +
     my_theme +
@@ -478,18 +440,27 @@ plot10 <- ggplot(CT_all, aes(x=reorder(`Content Type`,Total), y=Total)) +
     ylab("Number of all Content Types (Stand-alone and Compound)") +
     ggtitle("Distribution of all H5P Content Types (Stand-alone and Compound)
             in the Ontario Repository (2020-10-13)") +
-    geom_text(aes(label=Total), size=2.8, hjust=-0.2)
-plot10
+    geom_text(aes(label=All), size=2.8, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12))
+
+ggsave(    
+    filename = "ontario_plots/CT_all_type.pdf",
+    width = 10,
+    height = 8
+    )
+
 ```
 
 ## Discipline all
 
 ```{r ct-disciplines-all}
+CT_sa_sums <- adorn_totals(CT_sa, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+CT_all_sums <- adorn_totals(CT_all, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
+CT_subject_compounds <- bind_rows(df.QS, df.CP, df.IV)
+CT_subject_all <- bind_rows(CT_sa, df.QS, df.CP, df.IV)
+CT_subject_all_sums <- adorn_totals(CT_subject_all, where = c("row","col"), 
+                                    fill = "-", na.rm = TRUE, name = "Total")
 
-CT_subject_compounds <- bind_rows(CT_QS_df, CT_CP_df, CT_IV_df)
-CT_subject_stand_alone <- rename(CT_subject, ContentType = Name)
-CT_subject_all <- bind_rows(CT_subject_stand_alone, CT_QS_df, CT_CP_df, CT_IV_df)
-CT_subject_all_sums <- adorn_totals(CT_subject_all, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
 
 ```
 
@@ -497,7 +468,7 @@ CT_subject_all_sums <- adorn_totals(CT_subject_all, where = c("row","col"), fill
 ## Some preliminiary data for a blog entry
 
 ```{r blog-data}
-sum(CT_all$n)
-sum(CT_all$Total)
+CT_sa_sums[46,17]
+CT_all_sums[46,17]
 ```
 

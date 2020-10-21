@@ -1,7 +1,8 @@
 intro
 ontario
 research-questions
-overall-distribution-of-h5p-content-types
+stand-alone-distribution-of-h5p-content-types
+distribution-by-discipline
 distribution-in-question-sets
 distribution-in-course-presentations
 converting-strings-to-numeric-data
