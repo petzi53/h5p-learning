@@ -20,6 +20,12 @@ knitr::opts_chunk$set(
         )
 
 ### installing and loading packages
+
+# If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+if (!require("plyr"))
+        {install.packages("plyr", repos = 'http://cran.wu.ac.at/')
+        library(plyr)}
+
 ### https://www.tidyverse.org/
 if (!require("tidyverse"))
         {install.packages("tidyverse", repos = 'http://cran.wu.ac.at/')
@@ -68,7 +74,10 @@ vec.course.presentation =  c("Dialog Cards", "Drag and Drop", "Drag Text", "Fill
 vec.interactive.video =  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image Hotspots",
                         "Mark the Words", "Multiple Choice", "Questionnaire", "Single Choice Set",
                         "Summary", "True/False Question")
-
+vec.compounds =  c("Dialog Cards", "Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", 
+                   "Interactive Video", "Image Hotspots", "Mark the Words", "Multiple Choice", 
+                   "Questionnaire", "Single Choice Set", "Summary", "True/False Question")
+vec.compound.names = c("Question Set", "Course Presentation", "Interactive Video")
 ```
 
 ## Stand-alone distribution of H5P content types
@@ -76,39 +85,21 @@ vec.interactive.video =  c("Drag and Drop", "Drag Text", "Essay", "Fill in the B
 
 ```{r stand-alone}
 
-#read data for overall content types
+#########    read data for overall content types   ###############
 library(readODS)
-CT_sa_type <- read_ods(
+df.sa.type <- read_ods(
     path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
     sheet = 2,
     )
 
-ggplot(CT_sa_type, aes(x=reorder(`ContentType`, Overall), y=Overall)) + 
-    geom_bar(stat="identity", width = .8) +
-    coord_flip() +
-    my_theme +
-    xlab("Name of H5P Content Types") +
-    ylab("Number of Content Types") +
-    ggtitle("Distribution of H5P Stand-alone Content Types in the Ontario Repository (2020-10-13)") +
-    geom_text(aes(label=Overall), size=2.8, hjust=-0.2) +
-    theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)), 
-                     limits = seq(0, 200, by = 50))
 
-ggsave("ontario_plots/CT_sa_type.pdf",
-    width = 8,
-    height = 8
-    )
-
-#############
-
-# read data for content types by discipline
-CT_sa_subject <- read_ods(
+#########     read data for content types by discipline ##########
+df.sa.subject <- read_ods(
     path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
     sheet = 3,
     )
 
-CT_sa_subject <-  CT_sa_subject %>%
+df.sa.subject <-  df.sa.subject %>%
     adorn_totals(where = "row", name = "Total") %>%
     filter(ContentType == "Total") %>% 
     select(all_of(vec.subject.short)) %>% 
@@ -116,23 +107,68 @@ CT_sa_subject <-  CT_sa_subject %>%
     mutate(Discipline = vec.subject.long)
 
 
-ggplot(CT_sa_subject, aes(x=reorder(Discipline, Total), y = Total)) +
-    geom_bar(stat="identity") +
-    coord_flip() +
-    my_theme +
-    xlab("Discipline") +
-    ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("Usage of H5P Content Types by Discipline at the Ontario Repository") +
-    geom_text(aes(label=Total), size=3, hjust=-0.2) +
-    theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)),
-                      limits = seq(0,250, by = 50))
 
-ggsave(    
-    filename = "ontario_plots/CT_sa_subject.pdf",
-    width = 10,
-    height = 5
-    )
+#########      READ DATA FOR COMPOUND CONTENT TYPES          ################
+
+
+
+#################        QUESTION SET            ########################
+
+# see: https://stackoverflow.com/questions/17499013/how-do-i-make-a-list-of-data-frames
+LL.Question.Sets =  list()
+sheetNames <- list_ods_sheets("ontario_data/Question-Set-2020-10-14.ods")
+i <- length(sheetNames)
+for(i in 2:i){                             # i start with 2 because first sheet = Intro
+    LL.Question.Sets[[i-1]] <-                 # but list starts with 1
+        read_ods(             
+                path = "ontario_data/Question-Set-2020-10-14.ods",
+                sheet = i
+                )
+}
+### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
+names(LL.Question.Sets) <- vec.subject.short
+
+#################        COURSE PRESENTATION        ########################
+
+LL.Course.Presentations =  list()
+sheetNames <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
+i <- length(sheetNames)
+for(i in 2:i){                          
+    LL.Course.Presentations[[i-1]] <-  read_ods(             
+                path = "ontario_data/Course-Presentation-2020-10-15.ods",
+                sheet = i
+                )
+}
+names(LL.Course.Presentations) <- vec.subject.short
+
+##################        INTERACTIVE VIDEO        ########################
+
+LL.Interactive.Videos =  list()
+sheetNames <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
+i <- length(sheetNames)
+for(i in 2:i){                             
+    LL.Interactive.Videos[[i-1]] <-read_ods(             
+                path = "ontario_data/Interactive-Video-2020-10-16.ods",
+                sheet = i
+                )
+}
+
+names(LL.Interactive.Videos) <- vec.subject.short
+
+##################        MULTIPLE CONTENT TYPES        ########################
+
+### some CTs are counted multiple times when ordered by subject
+LL.Multiple.Values =  list()
+sheetNames <- list_ods_sheets("ontario_data/Content-Types-multiple.ods")
+i <- length(sheetNames)
+for(i in 2:i){                             
+    LL.Multiple.Values[[i-1]] <-read_ods(             
+                path = "ontario_data/Content-Types-multiple.ods",
+                sheet = i
+                )
+}
+
+names(LL.Multiple.Values) <- vec.compound.names
 
 
 ```
@@ -159,113 +195,7 @@ ggplot(df, aes(x=Type, y=N)) +
 ```
 
 
-## Read compound data into list
-
-```{r read-compound-data, fig.height = 4, fig.width=7}
-
-# see: https://stackoverflow.com/questions/17499013/how-do-i-make-a-list-of-data-frames
-LL.Question.Sets =  list()
-sheetNames <- list_ods_sheets("ontario_data/Question-Set-2020-10-14.ods")
-i <- length(sheetNames)
-for(i in 2:i){                             # i start with 2 because first sheet = Intro
-    LL.Question.Sets[[i-1]] <-                 # but list starts with 1
-        read_ods(             
-                path = "ontario_data/Question-Set-2020-10-14.ods",
-                sheet = i
-                )
-}
-### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
-names(LL.Question.Sets) <- vec.subject.short
-
-### ++++++++++++++++++++++++++++++++++++++
-
-LL.Course.Presentations =  list()
-sheetNames <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
-i <- length(sheetNames)
-for(i in 2:i){                          
-    LL.Course.Presentations[[i-1]] <-  read_ods(             
-                path = "ontario_data/Course-Presentation-2020-10-15.ods",
-                sheet = i
-                )
-}
-names(LL.Course.Presentations) <- vec.subject.short
-
-### ++++++++++++++++++++++++++++++++++++++
-
-LL.Interactive.Videos =  list()
-sheetNames <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
-i <- length(sheetNames)
-for(i in 2:i){                             
-    LL.Interactive.Videos[[i-1]] <-read_ods(             
-                path = "ontario_data/Interactive-Video-2020-10-16.ods",
-                sheet = i
-                )
-}
-
-names(LL.Interactive.Videos) <- vec.subject.short
-
-```
-
-```{r ct-question-set-alt, eval=FALSE, fig.height = 4, fig.width=7}
-
-CT.QS <- c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Mark the Words", 
-           "Multiple Choice", "True/False Question")
-df.QS <- data.frame(CT.QS)
-
-sheetNames <- list_ods_sheets("ontario_data/Questions-Set-2020-10-14.ods")
-i <- length(sheetNames)
-for(i in 1:i){
-    df_temp <- read_ods(
-                        path = "ontario_data/Questions-Set-2020-10-14.ods",
-                        sheet = i)
-    
-### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
-    df.QS <- bind_cols(df.QS, as.data.frame(df_temp[, ncol(df_temp)]))  
-}
-### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
-names(df.QS) <-  c("CT.QS", sheetNames)
-
-df.QS_long <- melt(df.QS, 
-                      id.vars = "CT.QS",
-                      variable.name = "Discipline",
-                      value.name = "n")
-
-ggplot(df.QS_long, aes(x=CT.QS, y=n, fill=Discipline)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Question Sets") +
-    ylab("Number of Content Types used within Question Sets") +
-    ggtitle("Usage of H5P Content Types within Question Sets at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-    
-ggsave(    
-    filename = "ontario_plots/CT_QS_type.pdf",
-    width = 10,
-    height = 5
-    )
-
-ggplot(df.QS_long, aes(x=Discipline, y=n, fill=CT.QS)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Question Sets by Discipline") +
-    ylab("Number of Content Types used within Question Sets") +
-    ggtitle("H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
-    scale_fill_discrete(name = "Content Types in 
-Question Sets") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-ggsave(    
-    filename = "ontario_plots/CT_QS_subject.pdf",
-    width = 10,
-    height = 5
-    )
-
-
-```
-
 ## Distribution in Course Presentations
-
 
 ```{r prepare-plot}
 
@@ -303,12 +233,90 @@ df.IV.long <- melt(df.IV.total,
 
 
 ```
+## Add compounds
+
+```{r add-compounds-data}
+
+### prepare df for union: 
+df.QS.total <-  adorn_totals(df.QS.total, "col")
+df.CP.total <-  adorn_totals(df.CP.total, "col")
+df.IV.total <-  adorn_totals(df.IV.total, "col")
+
+df.compounds <- 
+    tibble(ContentType = vec.compounds) %>% 
+    full_join(df.QS.total[, c(1,17)], by = "ContentType") %>% 
+    full_join(df.CP.total[, c(1,17)], by = "ContentType") %>% 
+    full_join(df.IV.total[, c(1,17)], by = "ContentType") %>% 
+    adorn_totals("col", name = "Overall")
+
+df.overall <-  
+    full_join(df.sa.type, df.compounds[, c(1,5)], by = "ContentType") %>% 
+    full_join(LL.Multiple.Values$`Interactive Video`[, c(1, 
+                         ncol(LL.Multiple.Values$`Interactive Video`))],
+                         by = "ContentType") %>% 
+    replace_na(list(Overall.y = 0, Total = 0)) %>% 
+    mutate(Overall = Overall.y - Total) %>% 
+    select(c(-Overall.y, -Total)) %>% 
+    rename("Stand.Alone" = Overall.x, "Compounds" = Overall) %>% 
+    # select(c(-Overall.y, -Total)) %>% 
+    # rename("Stand.Alone" = Overall.x, "Compounds" = Overall,
+    #        "Sum.Multiple" = Overall.y, "Diff" = "Total") %>% 
+    adorn_totals("col") 
+
+df.overall.long <- gather(df.overall,
+                          `Stand.Alone`, `Compounds`, key = "CT", value = N)
+    
+
+```
+
 
 ## Display and save plots
 
-```{r display-save-plots, fig.height = 4, fig.width=7}
+```{r display-save-plots, fig.height = 8, fig.width=8}
+
+##########              CONTENT TYPES STAND-ALONE          ###############
+
+ggplot(df.sa.type, aes(x=reorder(`ContentType`, Overall), y=Overall)) + 
+    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
+    coord_flip() +
+    my_theme +
+    xlab("Name of H5P Content Types") +
+    ylab("Number of Content Types") +
+    ggtitle("Distribution of H5P Stand-alone Content Types in the Ontario Repository (2020-10-13)") +
+    geom_text(aes(label=Overall), size=2.5, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)), 
+                     limits = seq(0, 200, by = 50))
+
+ggsave("ontario_plots/CT_sa_type.pdf",
+    width = 8,
+    height = 8
+    )
+
+##########              CONTENT TYPES BY SUBJECT          ###############
+
+ggplot(df.sa.subject, aes(x=reorder(Discipline, Total), y = Total)) +
+    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
+    coord_flip() +
+    my_theme +
+    xlab("Discipline") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("H5P Content Types by Discipline in the Ontario Repository") +
+    geom_text(aes(label=Total), size=3, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)),
+                      limits = seq(0,250, by = 50))
+
+ggsave(    
+    filename = "ontario_plots/CT_sa_subject.pdf",
+    width = 10,
+    height = 5
+    )
+
 
 ##########              QUESTION SET          ###############
+
+########## QUESTION SET: TYPE  ##########
 
 ggplot(df.QS.long, aes(x=ContentType, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
@@ -325,14 +333,15 @@ ggsave(
     height = 5
     )
 
+########## QUESTION SET: SUBJECT  ##########
+
 ggplot(df.QS.long, aes(x=Discipline, y=n, fill=ContentType)) +
     geom_bar(stat="identity") +
     my_theme +
     xlab("H5P Content Types used within Question Sets by Discipline") +
     ylab("Number of Content Types used within Question Sets") +
     ggtitle("H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
-    scale_fill_discrete(name = "Content Types in 
-Question Sets") +
+    scale_fill_discrete(name = "Content Types in\nQuestion Sets") +
     theme(axis.text.x = element_text(angle=50,hjust=1),
           plot.margin = margin(12,12,12,12))
 ggsave(    
@@ -343,6 +352,8 @@ ggsave(
 
 ##########      COURSE PRESENTATION          ###############
 
+
+########## COURSE PRESENTATION: TYPE  ##########
 
 ggplot(df.CP.long, aes(x=ContentType, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
@@ -358,6 +369,8 @@ ggsave(
     width = 10,
     height = 5
     )
+
+########## COURSE PRESENTATION: SUBJECT  ##########
 
 ggplot(df.CP.long, aes(x=Discipline, y=n, fill=ContentType)) +
     geom_bar(stat="identity") +
@@ -375,7 +388,11 @@ ggsave(
     height = 5
     )
 
+
+
 ##########      INTERACTIVE VIDEO          ###############
+
+########## INTERACTIVE VIDEO: TYPE  ##########
 
 ggplot(df.IV.long, aes(x=ContentType, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
@@ -391,6 +408,8 @@ ggsave(
     width = 10,
     height = 5
     )
+
+########## INTERACTIVE VIDEO: SUBJECT  ##########
 
 ggplot(df.IV.long, aes(x=Discipline, y=n, fill=ContentType)) +
     geom_bar(stat="identity") +
@@ -408,17 +427,92 @@ ggsave(
     height = 5
     )
 
+##############      ALL TOGETHER: DIFFERENT VARIANTS       ##################
+
+##############      ALL TOGETHER, BARS STACKED         ##################
+
+#### colored but without figures figures
+ggplot(df.overall, aes(x=reorder(ContentType, Total), y = Total)) +
+    geom_bar(stat="identity", width = .8, fill= "#2fbfc4", colour = "#2fbfc4") +
+    coord_flip() +
+    my_theme +
+    xlab("Content Types") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("H5P Content Types (Stand-alone and Compounds) at the Ontario Repository") +
+    geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)),
+                      limits = seq(0,1000, by = 200))
+
+ggsave(
+    filename = "ontario_plots/CT_overall.pdf",
+    width = 8,
+    height = 8
+    )
+
+##########      STACKED BAR EXPERIMENT: DOES NOT WORK!!!         ###############
+
+# next lines are experimental: see "R Graphics Cookbook" by Winston Chang, p.40)
+# but does not work !!!!! NO IDEA WHAT'S WRONG
+
+df.all.experiment <- plyr::arrange(df.overall.long, ContentType, CT)
+df.all.experiment <-  ddply(df.all.experiment, "ContentType", transform, label_y = cumsum(N))
+
+ggplot(df.all.experiment, aes(x=reorder(ContentType, N), y = N, fill = CT)) +
+    geom_bar(stat="identity", width = .8) +
+    coord_flip() +
+    my_theme +
+    labs(x = "Content Type", 
+         y = "Number of Content Types in the Ontario Repository",
+         title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
+         fill = "Content Types:"
+         ) +
+#   geom_text is wrong with IV, DD, DT, MW etc.
+    geom_text(aes(y=label_y, label=N), size=2.5, hjust=-0.5) +
+    theme(plot.margin = margin(12,12,12,12),
+            legend.position = "top") +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)),
+                     limits = seq(0,1000, by = 200)) +
+    scale_fill_discrete(labels =c("Compound", "Stand Alone")) +
+    guides(fill = guide_legend(reverse=TRUE))
+
+ggsave(    
+    filename = "ontario_plots/CT_not_working.pdf",
+    width = 8,
+    height = 8
+    )
+
+##########      NOT STACKED ALL TOGETHER: OLD ORDER         ###############
+
+
+df.overall.old.order <- bind_cols(df.overall, Overall = df.sa.type$Overall)
+ggplot(df.overall.old.order, aes(x=reorder(ContentType, Overall), y = Total)) +
+    geom_bar(stat="identity", width = .8, fill= "#2fbfc4", colour = "#2fbfc4") +
+    coord_flip() +
+    my_theme +
+    xlab("Content Types") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("H5P Content Types (Stand-alone and Compounds) at the Ontario Repository") +
+    geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)),
+                      limits = seq(0,1000, by = 200))
+
+ggsave(
+    filename = "ontario_plots/CT_overall_old_order.pdf",
+    width = 8,
+    height = 8
+    )
+
+
 
 ```
-
-### ++++++++++++ ABOVE OK, BELOW TO CHECK +++++++++++++++++ ###
-### +++++ ADD COMPOUNDS TO STAND-ALONE - COLOR BARS +++++++ ###
 
 
 
 ## Summarising compound content types
 
-```{r df_totals}
+```{r df_totals, eval=FALSE}
 df_compounds <- list(df.QS,df.CP,df.IV)
 df_sums_compounds <- list(df.QS,df.CP,df.IV)
 df_sums_compounds <- adorn_totals(df_compounds, c("row","col"))
@@ -430,11 +524,11 @@ df_sums_compounds <- adorn_totals(df_compounds, c("row","col"))
 ## Add values from compound content types to CT_all 
 
 
-```{r total-ct-with-compounds-new}
+```{r total-ct-with-compounds-new, eval=FALSE}
 
 
 
-CT_all <- CT_sa_type[, c(1,17)]   # copy CT_sa Name and Total to new df
+CT_all <- df.sa.type[, c(1,17)]   # copy CT_sa Name and Total to new df
 CT_all["Compounds"] <-  0L        # add cnew olumn to CT_all
 
 # ### create df with only rows of Name and Total (easier to check)
@@ -540,7 +634,7 @@ CT_all <- CT_all %>%
 
 
 
-```{r ct_all_compounds, fig.height = 7, fig.width=7}
+```{r ct_all_compounds, fig.height = 7, fig.width=7, eval=FALSE}
 ggplot(CT_all, aes(x=reorder(ContentType,All), y=All)) + 
     geom_bar(stat="identity") +
     coord_flip() +
@@ -562,7 +656,7 @@ ggsave(
 
 ## Discipline all
 
-```{r ct-disciplines-all}
+```{r ct-disciplines-all, eval=FALSE}
 CT_sa_sums <- adorn_totals(CT_sa, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
 CT_all_sums <- adorn_totals(CT_all, where = c("row","col"), fill = "-", na.rm = TRUE, name = "Total")
 CT_subject_compounds <- bind_rows(df.QS, df.CP, df.IV)
@@ -576,7 +670,7 @@ CT_subject_all_sums <- adorn_totals(CT_subject_all, where = c("row","col"),
 
 ## Some preliminiary data for a blog entry
 
-```{r blog-data}
+```{r blog-data, eval=FALSE}
 CT_sa_sums[46,17]
 CT_all_sums[46,17]
 ```
