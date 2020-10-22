@@ -56,18 +56,27 @@ my_theme <- theme_light() +
 
 ### global variables
 
-disciplines_short = c("Business", "Arts", "IT", "Law", "Earth", "Health", "History", "Language", "Literature", "Math", "Medicine", "Philosophy", "Reference", "Society", "Technology")
+vec.subject.short = c("Business", "Arts", "IT", "Law", "Earth", "Health", "History", "Language", "Literature", "Math", "Medicine", "Philosophy", "Reference", "Society", "Technology")
 
-disciplines = c("Business & Management", "The Arts", "Computing & IT", "Law", "Earth & Environment", "Health & Development", "History", "Language & Linguistics", "Literature", "Mathematics & Science", "Medicine & Nursing", "Philosophy & Religion", "Reference", "Society & Social Sciences", "Technology & Engineering")
+vec.subject.long = c("Business & Management", "The Arts", "Computing & IT", "Law", "Earth & Environment", "Health & Development", "History", "Language & Linguistics", "Literature", "Mathematics & Science", "Medicine & Nursing", "Philosophy & Religion", "Reference", "Society & Social Sciences", "Technology & Engineering")
+
+vec.question.set = c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Mark the Words",
+                 "Multiple Choice", "True/False Question")
+vec.course.presentation =  c("Dialog Cards", "Drag and Drop", "Drag Text", "Fill in the Blanks",
+                         "Interactive Video", "Mark the Words", "Multiple Choice", "Single Choice Set",
+                         "Summary", "True/False Question")
+vec.interactive.video =  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image Hotspots",
+                        "Mark the Words", "Multiple Choice", "Questionnaire", "Single Choice Set",
+                        "Summary", "True/False Question")
 
 ```
 
 ## Stand-alone distribution of H5P content types
 
 
-```{r ct-stand-alone}
+```{r stand-alone}
 
-#read data
+#read data for overall content types
 library(readODS)
 CT_sa_type <- read_ods(
     path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
@@ -82,7 +91,9 @@ ggplot(CT_sa_type, aes(x=reorder(`ContentType`, Overall), y=Overall)) +
     ylab("Number of Content Types") +
     ggtitle("Distribution of H5P Stand-alone Content Types in the Ontario Repository (2020-10-13)") +
     geom_text(aes(label=Overall), size=2.8, hjust=-0.2) +
-    theme(plot.margin = margin(12,12,12,12))
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)), 
+                     limits = seq(0, 200, by = 50))
 
 ggsave("ontario_plots/CT_sa_type.pdf",
     width = 8,
@@ -91,14 +102,19 @@ ggsave("ontario_plots/CT_sa_type.pdf",
 
 #############
 
-# calculate and prepare graph for content types by discipline
+# read data for content types by discipline
+CT_sa_subject <- read_ods(
+    path = "ontario_data/H5P-Content-Types-2020-10-13.ods",
+    sheet = 3,
+    )
 
-CT_sa_subject <- adorn_totals(CT_sa, where = "row", 
-                                       fill = "-", na.rm = TRUE, name = "Total")      # add totals to rows
-CT_sa_subject <- CT_sa_subject[nrow(CT_sa_subject) ,]                                 # get last row (= Total)
-CT_sa_subject <-  melt(CT_sa_subject, variable.name="Discipline", value.name="Total") # convert to long
-CT_sa_subject <- CT_sa_subject[, -1]                                                  # delete first column
-CT_sa_subject$Discipline = disciplines                                                # use full names
+CT_sa_subject <-  CT_sa_subject %>%
+    adorn_totals(where = "row", name = "Total") %>%
+    filter(ContentType == "Total") %>% 
+    select(all_of(vec.subject.short)) %>% 
+    gather(all_of(vec.subject.short), key = "Discipline", value = "Total") %>% 
+    mutate(Discipline = vec.subject.long)
+
 
 ggplot(CT_sa_subject, aes(x=reorder(Discipline, Total), y = Total)) +
     geom_bar(stat="identity") +
@@ -108,7 +124,9 @@ ggplot(CT_sa_subject, aes(x=reorder(Discipline, Total), y = Total)) +
     ylab("Number of Content Types in the Ontario Repository") +
     ggtitle("Usage of H5P Content Types by Discipline at the Ontario Repository") +
     geom_text(aes(label=Total), size=3, hjust=-0.2) +
-    theme(plot.margin = margin(12,12,12,12))
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)),
+                      limits = seq(0,250, by = 50))
 
 ggsave(    
     filename = "ontario_plots/CT_sa_subject.pdf",
@@ -121,9 +139,74 @@ ggsave(
 
 
 
-## Distribution in Question Sets
+```{r test, eval=FALSE, fig.height=2, fig.width=5}
+library(tidyverse)
 
-```{r ct-question-set, fig.height = 4, fig.width=7}
+df = tribble(
+  ~Type, ~N,
+  "A", 72,
+  "B", 14,
+  "C", 25,
+  "D",  9
+)
+
+ggplot(df, aes(x=Type, y=N)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    scale_y_discrete(expand = expansion(mult = c(0, .05)), limits=c(0, 20,40, 60))
+#    scale_y_discrete(expand = expansion(mult = c(0, .05)), breaks = seq(0,60, by = 20)) 
+#    scale_y_discrete(breaks = seq(0,60, by = 20))
+```
+
+
+## Read compound data into list
+
+```{r read-compound-data, fig.height = 4, fig.width=7}
+
+# see: https://stackoverflow.com/questions/17499013/how-do-i-make-a-list-of-data-frames
+LL.Question.Sets =  list()
+sheetNames <- list_ods_sheets("ontario_data/Question-Set-2020-10-14.ods")
+i <- length(sheetNames)
+for(i in 2:i){                             # i start with 2 because first sheet = Intro
+    LL.Question.Sets[[i-1]] <-                 # but list starts with 1
+        read_ods(             
+                path = "ontario_data/Question-Set-2020-10-14.ods",
+                sheet = i
+                )
+}
+### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
+names(LL.Question.Sets) <- vec.subject.short
+
+### ++++++++++++++++++++++++++++++++++++++
+
+LL.Course.Presentations =  list()
+sheetNames <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
+i <- length(sheetNames)
+for(i in 2:i){                          
+    LL.Course.Presentations[[i-1]] <-  read_ods(             
+                path = "ontario_data/Course-Presentation-2020-10-15.ods",
+                sheet = i
+                )
+}
+names(LL.Course.Presentations) <- vec.subject.short
+
+### ++++++++++++++++++++++++++++++++++++++
+
+LL.Interactive.Videos =  list()
+sheetNames <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
+i <- length(sheetNames)
+for(i in 2:i){                             
+    LL.Interactive.Videos[[i-1]] <-read_ods(             
+                path = "ontario_data/Interactive-Video-2020-10-16.ods",
+                sheet = i
+                )
+}
+
+names(LL.Interactive.Videos) <- vec.subject.short
+
+```
+
+```{r ct-question-set-alt, eval=FALSE, fig.height = 4, fig.width=7}
 
 CT.QS <- c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Mark the Words", 
            "Multiple Choice", "True/False Question")
@@ -184,32 +267,84 @@ ggsave(
 ## Distribution in Course Presentations
 
 
-```{r ct-course-presentation, fig.height = 4, fig.width=7}
+```{r prepare-plot}
+
+######      bind all total cols   ######################
+df.QS.total =  as_tibble(bind_cols(LL.Question.Sets))
+df.QS.total = select(df.QS.total, c(1,starts_with("Total")))
+names(df.QS.total) <- c("ContentType", vec.subject.short)
+
+df.CP.total =  as_tibble(bind_cols(LL.Course.Presentations))
+df.CP.total = select(df.CP.total, c(1,starts_with("Total")))
+names(df.CP.total) <- c("ContentType", vec.subject.short)
+
+df.IV.total =  as_tibble(bind_cols(LL.Interactive.Videos))
+df.IV.total = select(df.IV.total, c(1,starts_with("Total")))
+names(df.IV.total) <- c("ContentType", vec.subject.short)
+
+##############  reshape data from wide to long  #############
 
 
-CT.CP <-  c("Dialog Cards", "Drag and Drop", "Drag Text", "Fill in the Blanks", "Interactive Video", 
-            "Mark the Words", "Multiple Choice", "Single Choice Set", "Summary", "True/False Question")
-df.CP <- data.frame(CT.CP)
-
-sheetNames <- list_ods_sheets("ontario_data/Course-Presentation-2020-10-15.ods")
-i <- length(sheetNames)
-for(i in 1:i){
-    df_temp <- read_ods(
-                        path = "ontario_data/Course-Presentation-2020-10-15.ods",
-                        sheet = i)
-    
-### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
-    df.CP <- bind_cols(df.CP, as.data.frame(df_temp[, ncol(df_temp)]))  
-}
-### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
-names(df.CP) <-  c("CT.CP", sheetNames)
-
-df.CP_long <- melt(df.CP, 
-                      id.vars = "CT.CP",
+df.QS.long <- melt(df.QS.total, 
+                      id.vars = "ContentType",
                       variable.name = "Discipline",
                       value.name = "n")
 
-ggplot(df.CP_long, aes(x=CT.CP, y=n, fill=Discipline)) +
+df.CP.long <- melt(df.CP.total, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
+
+df.IV.long <- melt(df.IV.total, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
+
+
+
+```
+
+## Display and save plots
+
+```{r display-save-plots, fig.height = 4, fig.width=7}
+
+##########              QUESTION SET          ###############
+
+ggplot(df.QS.long, aes(x=ContentType, y=n, fill=Discipline)) +
+    geom_bar(stat="identity") +
+    my_theme +
+    xlab("H5P Content Types used within Question Sets") +
+    ylab("Number of Content Types used within Question Sets") +
+    ggtitle("Usage of H5P Content Types within Question Sets at the Ontario Repository") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
+    
+ggsave(    
+    filename = "ontario_plots/CT_QS_type.pdf",
+    width = 10,
+    height = 5
+    )
+
+ggplot(df.QS.long, aes(x=Discipline, y=n, fill=ContentType)) +
+    geom_bar(stat="identity") +
+    my_theme +
+    xlab("H5P Content Types used within Question Sets by Discipline") +
+    ylab("Number of Content Types used within Question Sets") +
+    ggtitle("H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
+    scale_fill_discrete(name = "Content Types in 
+Question Sets") +
+    theme(axis.text.x = element_text(angle=50,hjust=1),
+          plot.margin = margin(12,12,12,12))
+ggsave(    
+    filename = "ontario_plots/CT_QS_subject.pdf",
+    width = 10,
+    height = 5
+    )
+
+##########      COURSE PRESENTATION          ###############
+
+
+ggplot(df.CP.long, aes(x=ContentType, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
     my_theme +
     xlab("H5P Content Types used within Course Presentation") +
@@ -224,7 +359,7 @@ ggsave(
     height = 5
     )
 
-ggplot(df.CP_long, aes(x=Discipline, y=n, fill=CT.CP)) +
+ggplot(df.CP.long, aes(x=Discipline, y=n, fill=ContentType)) +
     geom_bar(stat="identity") +
     my_theme +
     xlab("H5P Content Types used within Course Presentation by Discipline") +
@@ -240,39 +375,9 @@ ggsave(
     height = 5
     )
 
+##########      INTERACTIVE VIDEO          ###############
 
-```
-
-## Distribution in Interactive Video
-
-
-```{r ct-interactive-video, fig.height = 4, fig.width=7}
-
-
-CT.IV <-  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image Hotspots", 
-            "Mark the Words", "Multiple Choice", "Questionnaire", "Single Choice Set", 
-            "Summary", "True/False Question")
-df.IV <- data.frame(CT.IV)
-
-sheetNames <- list_ods_sheets("ontario_data/Interactive-Video-2020-10-16.ods")
-i <- length(sheetNames)
-for(i in 1:i){
-    df_temp <- read_ods(
-                        path = "ontario_data/Interactive-Video-2020-10-16.ods",
-                        sheet = i)
-    
-### creates weird col names (df_temp[, ncol(df_temp)]…2, df_temp[, ncol(df_temp)]…3 etc.)
-    df.IV <- bind_cols(df.IV, as.data.frame(df_temp[, ncol(df_temp)]))  
-}
-### see: https://stackoverflow.com/questions/20987295/rename-multiple-columns-by-names
-names(df.IV) <-  c("CT.IV", sheetNames)
-
-df.IV_long <- melt(df.IV, 
-                      id.vars = "CT.IV",
-                      variable.name = "Discipline",
-                      value.name = "n")
-
-ggplot(df.IV_long, aes(x=CT.IV, y=n, fill=Discipline)) +
+ggplot(df.IV.long, aes(x=ContentType, y=n, fill=Discipline)) +
     geom_bar(stat="identity") +
     my_theme +
     xlab("H5P Content Types used within Interactive Video") +
@@ -287,7 +392,7 @@ ggsave(
     height = 5
     )
 
-ggplot(df.IV_long, aes(x=Discipline, y=n, fill=CT.IV)) +
+ggplot(df.IV.long, aes(x=Discipline, y=n, fill=ContentType)) +
     geom_bar(stat="identity") +
     my_theme +
     xlab("H5P Content Types used within Interactive Video by Discipline") +
@@ -305,6 +410,10 @@ ggsave(
 
 
 ```
+
+### ++++++++++++ ABOVE OK, BELOW TO CHECK +++++++++++++++++ ###
+### +++++ ADD COMPOUNDS TO STAND-ALONE - COLOR BARS +++++++ ###
+
 
 
 ## Summarising compound content types
