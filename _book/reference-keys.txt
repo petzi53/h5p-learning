@@ -5,7 +5,3 @@ stand-alone-distribution-of-h5p-content-types
 distribution-in-course-presentations
 add-compounds
 display-and-save-plots
-summarising-compound-content-types
-add-values-from-compound-content-types-to-ct_all
-discipline-all
-some-preliminiary-data-for-a-blog-entry

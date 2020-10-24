@@ -99,8 +99,11 @@ df.sa.subject <- read_ods(
     sheet = 3,
     )
 
-df.sa.subject <-  df.sa.subject %>%
-    adorn_totals(where = "row", name = "Total") %>%
+### LOOK HERE and the next few lines
+df.sa.subject <- adorn_totals(df.sa.subject, where = "row", name = "Total")
+
+df.sa.subject.sum <-  df.sa.subject %>%
+#    adorn_totals(where = "row", name = "Total") %>%
     filter(ContentType == "Total") %>% 
     select(all_of(vec.subject.short)) %>% 
     gather(all_of(vec.subject.short), key = "Discipline", value = "Total") %>% 
@@ -175,7 +178,7 @@ names(LL.Multiple.Values) <- vec.compound.names
 
 
 
-```{r test, eval=FALSE, fig.height=2, fig.width=5}
+```{r test1, eval=FALSE, fig.height=2, fig.width=5}
 library(tidyverse)
 
 df = tribble(
@@ -187,11 +190,117 @@ df = tribble(
 )
 
 ggplot(df, aes(x=Type, y=N)) +
-    geom_bar(stat="identity") +
-    coord_flip() +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)), limits=c(0, 20,40, 60))
-#    scale_y_discrete(expand = expansion(mult = c(0, .05)), breaks = seq(0,60, by = 20)) 
-#    scale_y_discrete(breaks = seq(0,60, by = 20))
+  geom_bar(stat="identity") +
+  coord_flip() +
+  scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+  scale_y_continuous(expand = expansion(mult = c(0, .05)))
+  
+
+ggplot(mtcars) +
+  geom_bar(aes(x = factor(cyl))) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0))) +
+  scale_x_discrete(expand = expansion(mult = c(0, 0)))
+
+
+# scale_y_discrete(expand = expansion(mult = c(0, .05)), limits=c(0, 20,40, 60))
+```
+
+```{r test2, eval=FALSE}
+library(gcookbook)
+# cabbage_exp
+ce <-  arrange(cabbage_exp, Date, Cultivar)
+ce <- mutate(ce, label_y=cumsum(Weight))
+# ce <- plyr::ddply(ce, "Date", transform, label_y=cumsum(Weight))
+Cultivar1 <-  factor(ce$Cultivar, levels = c("c52", "c39"))
+ggplot(ce, aes(x=Date, y=Weight, fill=Cultivar1)) +
+  geom_bar(stat="identity") +
+#  coord_flip() +
+  geom_text(aes(y=label_y, label=Weight), vjust=1.5, colour="white")
+
+
+df.test <-  df.overall[c(1,11,35, 40), ]
+df.test1 <-  pivot_longer(df.test, c(Stand.Alone, Compounds), names_to = "Trait", values_to = "Count")
+df.test2 <-  arrange(df.test1, ContentType, Trait)
+Trait <- factor(df.test1$Trait, levels = c("Stand.Alone", "Compounds"))
+df.test4 <-  plyr::ddply(df.test1, "ContentType", transform, label_y=cumsum(Count))
+df.test3 <-  mutate(df.test1, label_y=cumsum(Count))
+
+
+my.fun <- function(a, b) {
+  for(i in 1:length(a)){
+    # browser()
+    if(a[i] == b[i]) {b[i] <-  b[i]-30}
+    if(a[i] == 0){b[i] <-  -30}
+    # if(a[i] != b[i] && a[i] != 0) {b[i] <-  b[i] +30 }
+  }
+  return (b)
+}
+
+my.fun <- function(trait, n, cum) {
+  for(i in 1:length(trait)){
+    if(trait[i] == "Stand.Alone") {n[i] <- -30}
+    if(trait[i] == "Compounds") {n[i] <- cum[i] +30}
+  }
+  return (n)
+}
+
+df.test <-  df.overall[c(1,11,35,40), ]
+df.test1 <-  pivot_longer(df.test, c(Stand.Alone, Compounds), names_to = "Trait", values_to = "Count")
+# df.test2 <-  arrange(df.test1, ContentType, Trait)
+# Trait <- factor(df.test1$Trait, levels = c("Stand.Alone", "Compounds"))
+# df.test4 <-  plyr::ddply(df.test1, "ContentType", transform, label_y=cumsum(Count))
+df <-  mutate(df.test1, new = my.fun(Trait, df.test1$Count, Total))
+
+# df <-  mutate(df.test4, new = my.fun(Trait, df.test4$Count, df.test4$label_y))
+
+
+ggplot(df, aes(x=ContentType, y=Count, fill=Trait)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  geom_text(aes(y=new, label=Count))
+
+ggplot(df.test3, aes(x=ContentType, y=Count, fill=Trait)) +
+  geom_bar(stat="identity") +
+#  coord_flip() +
+  geom_text(aes(y=label_y, label=Count))
+
+
+
+ggplot(df.test5, aes(x=ContentType, y=Count, fill=Trait)) +
+  geom_bar(stat="identity") +
+#  coord_flip() +
+  geom_text(aes(y=label_correct, label=Count))
+
+ggplot(df.test, aes(x=ContentType, y=Count, fill=Trait)) +
+  geom_bar(stat="identity") +
+#  coord_flip() +
+  geom_text(aes(y=label_y, label=Count))
+
+dfx <- data.frame(
+  group = c(rep('A', 8), rep('B', 15), rep('C', 6)),
+  sex = sample(c("M", "F"), size = 29, replace = TRUE),
+  age = runif(n = 29, min = 18, max = 54)
+)
+
+dfx1 <- ddply(dfx, .(group, sex), summarize,
+ mean = round(mean(age), 2),
+ sd = round(sd(age), 2))
+
+my.fun <- function(a, b) {
+  for(i in 1:length(a)){
+    # browser()
+    if(a[i] == 0){
+      b[i] <-  0
+    }
+ }
+  return(b)
+}
+
+
+
+my.fun(c(199,0),c(199,199))
+
 ```
 
 
@@ -230,6 +339,11 @@ df.IV.long <- melt(df.IV.total,
                       variable.name = "Discipline",
                       value.name = "n")
 
+### LOOK HERE and the next few lines
+df.sa.subject.long <- melt(df.sa.subject, 
+                      id.vars = "ContentType",
+                      variable.name = "Discipline",
+                      value.name = "n")
 
 
 ```
@@ -285,34 +399,55 @@ ggplot(df.sa.type, aes(x=reorder(`ContentType`, Overall), y=Overall)) +
     ggtitle("Distribution of H5P Stand-alone Content Types in the Ontario Repository (2020-10-13)") +
     geom_text(aes(label=Overall), size=2.5, hjust=-0.2) +
     theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)), 
-                     limits = seq(0, 200, by = 50))
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+
 
 ggsave("ontario_plots/CT_sa_type.pdf",
     width = 8,
     height = 8
     )
 
-##########              CONTENT TYPES BY SUBJECT          ###############
+##########              CONTENT TYPES BY SUBJECT  SUM        ###############
 
-ggplot(df.sa.subject, aes(x=reorder(Discipline, Total), y = Total)) +
+ggplot(df.sa.subject.sum, aes(x=reorder(Discipline, Total), y = Total)) +
     geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
     coord_flip() +
     my_theme +
     xlab("Discipline") +
     ylab("Number of Content Types in the Ontario Repository") +
     ggtitle("H5P Content Types by Discipline in the Ontario Repository") +
-    geom_text(aes(label=Total), size=3, hjust=-0.2) +
+    geom_text(aes(label=Total), size=3, hjust=-0.3) +
     theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)),
-                      limits = seq(0,250, by = 50))
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+
+ggsave(    
+    filename = "ontario_plots/CT_sa_subject_sum.pdf",
+    width = 10,
+    height = 5
+    )
+
+##########              CONTENT TYPES BY SUBJECT DETAIL       ###############
+
+### LOOK HERE and the next few lines
+ggplot(df.sa.subject.long, aes(x=reorder(Discipline, n), y = n)) +
+    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
+    coord_flip() +
+    my_theme +
+    xlab("Discipline") +
+    ylab("Number of Content Types in the Ontario Repository") +
+    ggtitle("H5P Content Types by Discipline in the Ontario Repository") +
+    geom_text(aes(label=n), size=3, hjust=-0.2) +
+    theme(plot.margin = margin(12,12,12,12)) +
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
 
 ggsave(    
     filename = "ontario_plots/CT_sa_subject.pdf",
     width = 10,
     height = 5
     )
-
 
 ##########              QUESTION SET          ###############
 
@@ -429,36 +564,31 @@ ggsave(
 
 ##############      ALL TOGETHER: DIFFERENT VARIANTS       ##################
 
-##############      ALL TOGETHER, BARS STACKED         ##################
+##############      ALL TOGETHER, NO STACKED BARS         ##################
 
-#### colored but without figures figures
+#### only one bar, but with totals
 ggplot(df.overall, aes(x=reorder(ContentType, Total), y = Total)) +
     geom_bar(stat="identity", width = .8, fill= "#2fbfc4", colour = "#2fbfc4") +
     coord_flip() +
     my_theme +
     xlab("Content Types") +
     ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types (Stand-alone and Compounds) at the Ontario Repository") +
+    ggtitle("H5P Content Types (Stand-alone and Compounds) in the Ontario Repository") +
     geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
     theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)),
-                      limits = seq(0,1000, by = 200))
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
 
 ggsave(
-    filename = "ontario_plots/CT_overall.pdf",
+    filename = "ontario_plots/CT_overall_not_stacked.pdf",
     width = 8,
     height = 8
     )
 
-##########      STACKED BAR EXPERIMENT: DOES NOT WORK!!!         ###############
+##############      ALL TOGETHER, STACKED BARS/NO SUMS         ##################
 
-# next lines are experimental: see "R Graphics Cookbook" by Winston Chang, p.40)
-# but does not work !!!!! NO IDEA WHAT'S WRONG
-
-df.all.experiment <- plyr::arrange(df.overall.long, ContentType, CT)
-df.all.experiment <-  ddply(df.all.experiment, "ContentType", transform, label_y = cumsum(N))
-
-ggplot(df.all.experiment, aes(x=reorder(ContentType, N), y = N, fill = CT)) +
+#### stacked bars, but without totals
+ggplot(df.overall.long, aes(x=reorder(ContentType, N), y = N, fill = CT)) +
     geom_bar(stat="identity", width = .8) +
     coord_flip() +
     my_theme +
@@ -467,20 +597,120 @@ ggplot(df.all.experiment, aes(x=reorder(ContentType, N), y = N, fill = CT)) +
          title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
          fill = "Content Types:"
          ) +
-#   geom_text is wrong with IV, DD, DT, MW etc.
-    geom_text(aes(y=label_y, label=N), size=2.5, hjust=-0.5) +
+#    geom_text is wrong with IV, DD, DT, MW etc.
+#    geom_text(aes(y=label_y, label=N), size=2.5, hjust=-0.5) +
     theme(plot.margin = margin(12,12,12,12),
             legend.position = "top") +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)),
-                     limits = seq(0,1000, by = 200)) +
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05))) +
     scale_fill_discrete(labels =c("Compound", "Stand Alone")) +
     guides(fill = guide_legend(reverse=TRUE))
 
+
+ggsave(
+    filename = "ontario_plots/CT_overall-stacked.pdf",
+    width = 8,
+    height = 8.2
+    )
+
+
+
+
+##########      STACKED BAR WITH 2 NUMBERS: sa and compounds        ###############
+
+
+
+my.fun <- function(trait, n, cum) {
+  for(i in 1:length(trait)){
+    if(trait[i] == "Stand.Alone") {
+      n[i] <- -5
+    }
+
+    if(trait[i] == "Compounds") {
+      if(n[i] >= 100) {n[i] <-cum[i] +35}
+      if(n[i] <= 100 && n[i] >= 10) {n[i] <- cum[i] +25}
+      if(n[i] < 10) {n[i] <- cum[i] +15}
+    }
+  }
+  return (n)
+}
+
+df <-  mutate(df.overall.long, label_y = my.fun(CT, N, Total))
+
+ggplot(df, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
+  geom_bar(stat="identity", width = .8) +
+  coord_flip() + 
+  my_theme +
+  labs(x = "Content Type", 
+       y = "Number of Content Types in the Ontario Repository",
+       title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
+       fill = "Content Types:"
+       ) +
+  geom_text(aes(y=label_y, label=N), size=2.5, hjust = 1) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =c("Compound", "Stand Alone")) +
+  scale_y_continuous(expand = expansion(mult = c(.04, 0.02))) +
+  guides(fill = guide_legend(reverse=TRUE))
+
 ggsave(    
-    filename = "ontario_plots/CT_not_working.pdf",
+    filename = "ontario_plots/CT_sa_compound.pdf",
     width = 8,
     height = 8
     )
+
+##########      STACKED BAR WITH 3 NUMBERS: sa and compounds / overall       ###############
+
+
+
+my2.fun <- function(trait, n, cum) {
+  for(i in 1:length(trait)){
+    if(trait[i] == "Stand.Alone") {
+      n[i] <- -5
+    }
+
+    if(trait[i] == "Compounds") {
+      s <- paste0(n[i], cum[i])
+      if(nchar(s) >= 6){n[i] <-cum[i] +70}
+      if(nchar(s) == 5){n[i] <-cum[i] +65}
+      if(nchar(s) == 4){n[i] <-cum[i] +60}
+      if(nchar(s) == 3){n[i] <-cum[i] +50}
+      if(nchar(s) == 2){n[i] <-cum[i] +40}
+    }
+  }
+  return (n)
+}
+
+df <-  mutate(df.overall.long, label_y = my2.fun(CT, N, Total))
+df.final <- mutate(df, Overall = ifelse(CT == "Compounds", paste0(N, "/", Total), as.character(N)))
+
+ggplot(df.final, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
+  geom_bar(stat="identity", width = .8) +
+  coord_flip() + 
+  my_theme +
+  labs(x = "Content Type", 
+       y = "Number of Content Types in the Ontario Repository",
+       title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
+       fill = "Content Types:"
+       ) +
+  geom_text(aes(y=label_y, label=Overall), size=2.5, hjust = 1) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =c("Compound / Overall", "Stand Alone")) +
+  scale_y_continuous(expand = expansion(mult = c(.04, 0.02))) +
+  guides(fill = guide_legend(reverse=TRUE))
+
+ggsave(    
+    filename = "ontario_plots/CT_overall.pdf",
+    width = 8,
+    height = 8
+    )
+
+
 
 ##########      NOT STACKED ALL TOGETHER: OLD ORDER         ###############
 
@@ -492,11 +722,12 @@ ggplot(df.overall.old.order, aes(x=reorder(ContentType, Overall), y = Total)) +
     my_theme +
     xlab("Content Types") +
     ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types (Stand-alone and Compounds) at the Ontario Repository") +
+    ggtitle("H5P Content Types (Stand-alone and Compounds) in the Ontario Repository,
+            ordered by the number of Stand-alone Content Types") +
     geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
     theme(plot.margin = margin(12,12,12,12)) +
-    scale_y_discrete(expand = expansion(mult = c(0, .05)),
-                      limits = seq(0,1000, by = 200))
+    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
 
 ggsave(
     filename = "ontario_plots/CT_overall_old_order.pdf",
@@ -508,4 +739,8 @@ ggsave(
 
 ```
 
+
+```{r}
+sum(df.overall$Total)
+```
 
