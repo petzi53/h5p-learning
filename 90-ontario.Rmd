@@ -71,13 +71,49 @@ vec.question.set = c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks"
 vec.course.presentation =  c("Dialog Cards", "Drag and Drop", "Drag Text", "Fill in the Blanks",
                          "Interactive Video", "Mark the Words", "Multiple Choice", "Single Choice Set",
                          "Summary", "True/False Question")
-vec.interactive.video =  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image Hotspots",
-                        "Mark the Words", "Multiple Choice", "Questionnaire", "Single Choice Set",
-                        "Summary", "True/False Question")
+vec.interactive.video =  c("Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", "Image
+                           Hotspots", "Mark the Words", "Multiple Choice", "Questionnaire", 
+                           "Single Choice Set","Summary", "True/False Question")
 vec.compounds =  c("Dialog Cards", "Drag and Drop", "Drag Text", "Essay", "Fill in the Blanks", 
                    "Interactive Video", "Image Hotspots", "Mark the Words", "Multiple Choice", 
                    "Questionnaire", "Single Choice Set", "Summary", "True/False Question")
 vec.compound.names = c("Question Set", "Course Presentation", "Interactive Video")
+
+vec.lotCT.disciplines = c("ContentType", "Business", "IT", "Language", "Math", 
+                          "Medicine", "Reference", "Society", "Technology")
+
+QS.group.colours =  c(
+                   "Drag and Drop" = "#E68601", 
+                   "Drag Text" = "#F967A3", 
+                   "Essay" =  "black", #"#E76BF3", 
+                   "Fill in the Blanks" = "#6BB100", 
+                   "Mark the Words" = "#619CFF", 
+                   "Multiple Choice" = "#F961D2", 
+                   "True/False Question" = "#2FBFC4")
+
+CP.group.colours =  c("Dialog Cards" = "#F7756D",
+                   "Drag and Drop" = "#E68601", 
+                   "Drag Text" = "#F967A3", 
+                   "Fill in the Blanks" = "#6BB100", 
+                   "Interactive Video" = "grey", #"#24B0F5",
+                   "Mark the Words" = "#619CFF", 
+                   "Multiple Choice" = "#F961D2", 
+                   "Single Choice Set" = "darkblue", #"#F961D2",
+                   "Summary" = "#C99801",
+                   "True/False Question" = "#2FBFC4")
+
+IV.group.colours =  c(
+                   "Drag and Drop" = "#E68601", 
+                   "Drag Text" = "#F967A3", 
+                   "Essay" = "black", #"#E76BF3", 
+                   "Fill in the Blanks" = "#6BB100", 
+                   "Image Hotspots" = "#31C0AF", 
+                   "Mark the Words" = "#619CFF", 
+                   "Multiple Choice" = "#F961D2",
+                   "Questionnaire" = "#A2A500",
+                   "Single Choice Set" = "darkblue", #"#F961D2",
+                   "Summary" = "#C99801", 
+                   "True/False Question" = "#2FBFC4")
 ```
 
 ## Stand-alone distribution of H5P content types
@@ -99,11 +135,9 @@ df.sa.subject <- read_ods(
     sheet = 3,
     )
 
-### LOOK HERE and the next few lines
-df.sa.subject <- adorn_totals(df.sa.subject, where = "row", name = "Total")
 
 df.sa.subject.sum <-  df.sa.subject %>%
-#    adorn_totals(where = "row", name = "Total") %>%
+    adorn_totals("row") %>% 
     filter(ContentType == "Total") %>% 
     select(all_of(vec.subject.short)) %>% 
     gather(all_of(vec.subject.short), key = "Discipline", value = "Total") %>% 
@@ -206,102 +240,6 @@ ggplot(mtcars) +
 # scale_y_discrete(expand = expansion(mult = c(0, .05)), limits=c(0, 20,40, 60))
 ```
 
-```{r test2, eval=FALSE}
-library(gcookbook)
-# cabbage_exp
-ce <-  arrange(cabbage_exp, Date, Cultivar)
-ce <- mutate(ce, label_y=cumsum(Weight))
-# ce <- plyr::ddply(ce, "Date", transform, label_y=cumsum(Weight))
-Cultivar1 <-  factor(ce$Cultivar, levels = c("c52", "c39"))
-ggplot(ce, aes(x=Date, y=Weight, fill=Cultivar1)) +
-  geom_bar(stat="identity") +
-#  coord_flip() +
-  geom_text(aes(y=label_y, label=Weight), vjust=1.5, colour="white")
-
-
-df.test <-  df.overall[c(1,11,35, 40), ]
-df.test1 <-  pivot_longer(df.test, c(Stand.Alone, Compounds), names_to = "Trait", values_to = "Count")
-df.test2 <-  arrange(df.test1, ContentType, Trait)
-Trait <- factor(df.test1$Trait, levels = c("Stand.Alone", "Compounds"))
-df.test4 <-  plyr::ddply(df.test1, "ContentType", transform, label_y=cumsum(Count))
-df.test3 <-  mutate(df.test1, label_y=cumsum(Count))
-
-
-my.fun <- function(a, b) {
-  for(i in 1:length(a)){
-    # browser()
-    if(a[i] == b[i]) {b[i] <-  b[i]-30}
-    if(a[i] == 0){b[i] <-  -30}
-    # if(a[i] != b[i] && a[i] != 0) {b[i] <-  b[i] +30 }
-  }
-  return (b)
-}
-
-my.fun <- function(trait, n, cum) {
-  for(i in 1:length(trait)){
-    if(trait[i] == "Stand.Alone") {n[i] <- -30}
-    if(trait[i] == "Compounds") {n[i] <- cum[i] +30}
-  }
-  return (n)
-}
-
-df.test <-  df.overall[c(1,11,35,40), ]
-df.test1 <-  pivot_longer(df.test, c(Stand.Alone, Compounds), names_to = "Trait", values_to = "Count")
-# df.test2 <-  arrange(df.test1, ContentType, Trait)
-# Trait <- factor(df.test1$Trait, levels = c("Stand.Alone", "Compounds"))
-# df.test4 <-  plyr::ddply(df.test1, "ContentType", transform, label_y=cumsum(Count))
-df <-  mutate(df.test1, new = my.fun(Trait, df.test1$Count, Total))
-
-# df <-  mutate(df.test4, new = my.fun(Trait, df.test4$Count, df.test4$label_y))
-
-
-ggplot(df, aes(x=ContentType, y=Count, fill=Trait)) +
-  geom_bar(stat="identity") +
-  coord_flip() +
-  geom_text(aes(y=new, label=Count))
-
-ggplot(df.test3, aes(x=ContentType, y=Count, fill=Trait)) +
-  geom_bar(stat="identity") +
-#  coord_flip() +
-  geom_text(aes(y=label_y, label=Count))
-
-
-
-ggplot(df.test5, aes(x=ContentType, y=Count, fill=Trait)) +
-  geom_bar(stat="identity") +
-#  coord_flip() +
-  geom_text(aes(y=label_correct, label=Count))
-
-ggplot(df.test, aes(x=ContentType, y=Count, fill=Trait)) +
-  geom_bar(stat="identity") +
-#  coord_flip() +
-  geom_text(aes(y=label_y, label=Count))
-
-dfx <- data.frame(
-  group = c(rep('A', 8), rep('B', 15), rep('C', 6)),
-  sex = sample(c("M", "F"), size = 29, replace = TRUE),
-  age = runif(n = 29, min = 18, max = 54)
-)
-
-dfx1 <- ddply(dfx, .(group, sex), summarize,
- mean = round(mean(age), 2),
- sd = round(sd(age), 2))
-
-my.fun <- function(a, b) {
-  for(i in 1:length(a)){
-    # browser()
-    if(a[i] == 0){
-      b[i] <-  0
-    }
- }
-  return(b)
-}
-
-
-
-my.fun(c(199,0),c(199,199))
-
-```
 
 
 ## Distribution in Course Presentations
@@ -339,11 +277,16 @@ df.IV.long <- melt(df.IV.total,
                       variable.name = "Discipline",
                       value.name = "n")
 
-### LOOK HERE and the next few lines
 df.sa.subject.long <- melt(df.sa.subject, 
                       id.vars = "ContentType",
                       variable.name = "Discipline",
                       value.name = "n")
+
+df.QSlot.long <- df.QS.total %>% 
+    select(vec.lotCT.disciplines) %>%
+    melt(id.vars = "ContentType",
+        variable.name = "Discipline",
+        value.name = "n")
 
 
 ```
@@ -352,15 +295,15 @@ df.sa.subject.long <- melt(df.sa.subject,
 ```{r add-compounds-data}
 
 ### prepare df for union: 
-df.QS.total <-  adorn_totals(df.QS.total, "col")
-df.CP.total <-  adorn_totals(df.CP.total, "col")
-df.IV.total <-  adorn_totals(df.IV.total, "col")
+df.QS.col.total <-  adorn_totals(df.QS.total, "col")
+df.CP.col.total <-  adorn_totals(df.CP.total, "col")
+df.IV.col.total <-  adorn_totals(df.IV.total, "col")
 
 df.compounds <- 
     tibble(ContentType = vec.compounds) %>% 
-    full_join(df.QS.total[, c(1,17)], by = "ContentType") %>% 
-    full_join(df.CP.total[, c(1,17)], by = "ContentType") %>% 
-    full_join(df.IV.total[, c(1,17)], by = "ContentType") %>% 
+    full_join(df.QS.col.total[, c(1,17)], by = "ContentType") %>% 
+    full_join(df.CP.col.total[, c(1,17)], by = "ContentType") %>% 
+    full_join(df.IV.col.total[, c(1,17)], by = "ContentType") %>% 
     adorn_totals("col", name = "Overall")
 
 df.overall <-  
@@ -372,24 +315,60 @@ df.overall <-
     mutate(Overall = Overall.y - Total) %>% 
     select(c(-Overall.y, -Total)) %>% 
     rename("Stand.Alone" = Overall.x, "Compounds" = Overall) %>% 
-    # select(c(-Overall.y, -Total)) %>% 
-    # rename("Stand.Alone" = Overall.x, "Compounds" = Overall,
-    #        "Sum.Multiple" = Overall.y, "Diff" = "Total") %>% 
     adorn_totals("col") 
+
+df.overall.sum <- df.overall %>% 
+  adorn_totals("row") %>% 
+  filter(ContentType == "Total")
 
 df.overall.long <- gather(df.overall,
                           `Stand.Alone`, `Compounds`, key = "CT", value = N)
-    
+
+###############################################################################
+##### compound by discipline
+
+df.QS.disc.total <-  df.QS.total %>% 
+  adorn_totals("row", name = "QS.Total") %>% 
+  filter(ContentType == "QS.Total")
+
+df.CP.disc.total <-  df.CP.total %>% 
+  adorn_totals("row", name = "CP.Total") %>% 
+  filter(ContentType == "CP.Total")
+
+df.IV.disc.total <-  df.IV.total %>% 
+  adorn_totals("row", name = "IV.Total") %>% 
+  filter(ContentType == "IV.Total")
+
+df.disc <- bind_rows(df.QS.disc.total, df.CP.disc.total, df.IV.disc.total ) %>% 
+  pivot_longer(!ContentType, names_to = "Discipline", values_to = "N") %>% 
+  pivot_wider(names_from = ContentType, values_from = N) %>% 
+  bind_cols("SA.Total" = df.sa.subject.sum[,2]) %>% 
+  relocate(SA.Total, QS.Total, IV.Total, CP.Total,  .after = "Discipline")
+
+
+
+# compare CTs in different environment: SA, QS, CP, IV
+# only with disciplines which have more than 30 SA CTs
+ df.disc.30.long <-  df.disc %>% 
+  mutate(Discipline = vec.subject.long) %>% 
+  filter(SA.Total > 30) %>% 
+  adorn_totals("col", name = "Overall") %>% 
+  pivot_longer(cols = 2:5, names_to = "CT.Kind", values_to = "N") %>% 
+  group_by(Discipline) %>% 
+  mutate(label_y = cumsum(N) - 0.5 * N)
+  
+
 
 ```
 
 
 ## Display and save plots
 
-```{r display-save-plots, fig.height = 8, fig.width=8}
+### Content types per count
 
-##########              CONTENT TYPES STAND-ALONE          ###############
+#### Stand-alone content types with sums, ordered by count
 
+```{r CT-stand-alone-sum, fig.height=10, fig.width=8}
 ggplot(df.sa.type, aes(x=reorder(`ContentType`, Overall), y=Overall)) + 
     geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
     coord_flip() +
@@ -403,267 +382,41 @@ ggplot(df.sa.type, aes(x=reorder(`ContentType`, Overall), y=Overall)) +
     scale_y_continuous(expand = expansion(mult = c(0, .05)))
 
 
-ggsave("ontario_plots/CT_sa_type.pdf",
+ggsave("ontario-plots/CT-stand-alone-sum.pdf",
     width = 8,
-    height = 8
+    height = 10
     )
 
-##########              CONTENT TYPES BY SUBJECT  SUM        ###############
+```
 
-ggplot(df.sa.subject.sum, aes(x=reorder(Discipline, Total), y = Total)) +
-    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
-    coord_flip() +
-    my_theme +
-    xlab("Discipline") +
-    ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types by Discipline in the Ontario Repository") +
-    geom_text(aes(label=Total), size=3, hjust=-0.3) +
-    theme(plot.margin = margin(12,12,12,12)) +
-    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+#### All content types with sums, ordered by count of stand-alones 
 
-ggsave(    
-    filename = "ontario_plots/CT_sa_subject_sum.pdf",
-    width = 10,
-    height = 5
-    )
-
-##########              CONTENT TYPES BY SUBJECT DETAIL       ###############
-
-### LOOK HERE and the next few lines
-ggplot(df.sa.subject.long, aes(x=reorder(Discipline, n), y = n)) +
-    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
-    coord_flip() +
-    my_theme +
-    xlab("Discipline") +
-    ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types by Discipline in the Ontario Repository") +
-    geom_text(aes(label=n), size=3, hjust=-0.2) +
-    theme(plot.margin = margin(12,12,12,12)) +
-    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0, .05)))
-
-ggsave(    
-    filename = "ontario_plots/CT_sa_subject.pdf",
-    width = 10,
-    height = 5
-    )
-
-##########              QUESTION SET          ###############
-
-########## QUESTION SET: TYPE  ##########
-
-ggplot(df.QS.long, aes(x=ContentType, y=n, fill=Discipline)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Question Sets") +
-    ylab("Number of Content Types used within Question Sets") +
-    ggtitle("Usage of H5P Content Types within Question Sets at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-    
-ggsave(    
-    filename = "ontario_plots/CT_QS_type.pdf",
-    width = 10,
-    height = 5
-    )
-
-########## QUESTION SET: SUBJECT  ##########
-
-ggplot(df.QS.long, aes(x=Discipline, y=n, fill=ContentType)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Question Sets by Discipline") +
-    ylab("Number of Content Types used within Question Sets") +
-    ggtitle("H5P Content Types within Question Sets by Discipline at the Ontario Repository") +
-    scale_fill_discrete(name = "Content Types in\nQuestion Sets") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-ggsave(    
-    filename = "ontario_plots/CT_QS_subject.pdf",
-    width = 10,
-    height = 5
-    )
-
-##########      COURSE PRESENTATION          ###############
-
-
-########## COURSE PRESENTATION: TYPE  ##########
-
-ggplot(df.CP.long, aes(x=ContentType, y=n, fill=Discipline)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Course Presentation") +
-    ylab("Number of Content Types used within Course Presentation") +
-    ggtitle("Usage of H5P Content Types within Course Presentation at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-    
-ggsave(    
-    filename = "ontario_plots/CT_CP_type.pdf",
-    width = 10,
-    height = 5
-    )
-
-########## COURSE PRESENTATION: SUBJECT  ##########
-
-ggplot(df.CP.long, aes(x=Discipline, y=n, fill=ContentType)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Course Presentation by Discipline") +
-    ylab("Number of Content Types used within Course Presentation") +
-    ggtitle("H5P Content Types within Course Presentation by Discipline at the Ontario Repository") +
-    scale_fill_discrete(name = "Content Types in 
-Course Presentation") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-ggsave(    
-    filename = "ontario_plots/CT_CP_subject.pdf",
-    width = 10,
-    height = 5
-    )
-
-
-
-##########      INTERACTIVE VIDEO          ###############
-
-########## INTERACTIVE VIDEO: TYPE  ##########
-
-ggplot(df.IV.long, aes(x=ContentType, y=n, fill=Discipline)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Interactive Video") +
-    ylab("Number of Content Types used within Interactive Video") +
-    ggtitle("Usage of H5P Content Types within Interactive Video at the Ontario Repository") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-    
-ggsave(    
-    filename = "ontario_plots/CT_IV_type.pdf",
-    width = 10,
-    height = 5
-    )
-
-########## INTERACTIVE VIDEO: SUBJECT  ##########
-
-ggplot(df.IV.long, aes(x=Discipline, y=n, fill=ContentType)) +
-    geom_bar(stat="identity") +
-    my_theme +
-    xlab("H5P Content Types used within Interactive Video by Discipline") +
-    ylab("Number of Content Types used within Interactive Video") +
-    ggtitle("H5P Content Types within Interactive Video by Discipline at the Ontario Repository") +
-    scale_fill_discrete(name = "Content Types in 
-Interactive Video") +
-    theme(axis.text.x = element_text(angle=50,hjust=1),
-          plot.margin = margin(12,12,12,12))
-ggsave(    
-    filename = "ontario_plots/CT_IV_subject.pdf",
-    width = 10,
-    height = 5
-    )
-
-##############      ALL TOGETHER: DIFFERENT VARIANTS       ##################
-
-##############      ALL TOGETHER, NO STACKED BARS         ##################
-
-#### only one bar, but with totals
-ggplot(df.overall, aes(x=reorder(ContentType, Total), y = Total)) +
+```{r CT-all-sum-sa-order, fig.height=10, fig.width=8}
+df.overall.old.order <- bind_cols(df.overall, Overall = df.sa.type$Overall)
+ggplot(df.overall.old.order, aes(x=reorder(ContentType, Overall), y = Total)) +
     geom_bar(stat="identity", width = .8, fill= "#2fbfc4", colour = "#2fbfc4") +
     coord_flip() +
     my_theme +
     xlab("Content Types") +
     ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types (Stand-alone and Compounds) in the Ontario Repository") +
+    ggtitle("H5P Content Types (Stand-alone and Compounds) in the Ontario Repository,
+            ordered by the number of Stand-alone Content Types") +
     geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
     theme(plot.margin = margin(12,12,12,12)) +
     scale_x_discrete(expand = expansion(mult = c(0, 0))) +
     scale_y_continuous(expand = expansion(mult = c(0, .05)))
 
 ggsave(
-    filename = "ontario_plots/CT_overall_not_stacked.pdf",
+    filename = "ontario-plots/CT-all-sum-sa-order.pdf",
     width = 8,
-    height = 8
+    height = 10
     )
 
-##############      ALL TOGETHER, STACKED BARS/NO SUMS         ##################
+```
 
-#### stacked bars, but without totals
-ggplot(df.overall.long, aes(x=reorder(ContentType, N), y = N, fill = CT)) +
-    geom_bar(stat="identity", width = .8) +
-    coord_flip() +
-    my_theme +
-    labs(x = "Content Type", 
-         y = "Number of Content Types in the Ontario Repository",
-         title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
-         fill = "Content Types:"
-         ) +
-#    geom_text is wrong with IV, DD, DT, MW etc.
-#    geom_text(aes(y=label_y, label=N), size=2.5, hjust=-0.5) +
-    theme(plot.margin = margin(12,12,12,12),
-            legend.position = "top") +
-    scale_x_discrete(expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0, .05))) +
-    scale_fill_discrete(labels =c("Compound", "Stand Alone")) +
-    guides(fill = guide_legend(reverse=TRUE))
+#### Stand-alone and compounds content types with sums, ordered by count
 
-
-ggsave(
-    filename = "ontario_plots/CT_overall-stacked.pdf",
-    width = 8,
-    height = 8.2
-    )
-
-
-
-
-##########      STACKED BAR WITH 2 NUMBERS: sa and compounds        ###############
-
-
-
-my.fun <- function(trait, n, cum) {
-  for(i in 1:length(trait)){
-    if(trait[i] == "Stand.Alone") {
-      n[i] <- -5
-    }
-
-    if(trait[i] == "Compounds") {
-      if(n[i] >= 100) {n[i] <-cum[i] +35}
-      if(n[i] <= 100 && n[i] >= 10) {n[i] <- cum[i] +25}
-      if(n[i] < 10) {n[i] <- cum[i] +15}
-    }
-  }
-  return (n)
-}
-
-df <-  mutate(df.overall.long, label_y = my.fun(CT, N, Total))
-
-ggplot(df, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
-  geom_bar(stat="identity", width = .8) +
-  coord_flip() + 
-  my_theme +
-  labs(x = "Content Type", 
-       y = "Number of Content Types in the Ontario Repository",
-       title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
-       fill = "Content Types:"
-       ) +
-  geom_text(aes(y=label_y, label=N), size=2.5, hjust = 1) +
-  theme(plot.margin = margin(12,12,12,12),
-        legend.position = "top",
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank()) +
-  scale_fill_discrete(labels =c("Compound", "Stand Alone")) +
-  scale_y_continuous(expand = expansion(mult = c(.04, 0.02))) +
-  guides(fill = guide_legend(reverse=TRUE))
-
-ggsave(    
-    filename = "ontario_plots/CT_sa_compound.pdf",
-    width = 8,
-    height = 8
-    )
-
-##########      STACKED BAR WITH 3 NUMBERS: sa and compounds / overall       ###############
-
-
+```{r CT-sa-compound-sums, fig.height=10, fig.width=8}
 
 my2.fun <- function(trait, n, cum) {
   for(i in 1:length(trait)){
@@ -683,8 +436,9 @@ my2.fun <- function(trait, n, cum) {
   return (n)
 }
 
-df <-  mutate(df.overall.long, label_y = my2.fun(CT, N, Total))
-df.final <- mutate(df, Overall = ifelse(CT == "Compounds", paste0(N, "/", Total), as.character(N)))
+df.final <- df.overall.long %>% 
+  mutate(label_y = my2.fun(CT, N, Total)) %>% 
+  mutate(Overall = ifelse(CT == "Compounds", paste0(N, "/", Total), as.character(N)))
 
 ggplot(df.final, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
   geom_bar(stat="identity", width = .8) +
@@ -693,7 +447,7 @@ ggplot(df.final, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
   labs(x = "Content Type", 
        y = "Number of Content Types in the Ontario Repository",
        title = "Content Types (Stand-Alone and Compounds) in the Ontario Repository",
-       fill = "Content Types:"
+       fill = "Content Types"
        ) +
   geom_text(aes(y=label_y, label=Overall), size=2.5, hjust = 1) +
   theme(plot.margin = margin(12,12,12,12),
@@ -705,42 +459,352 @@ ggplot(df.final, aes(x=reorder(ContentType, Total), y=N, fill=CT)) +
   guides(fill = guide_legend(reverse=TRUE))
 
 ggsave(    
-    filename = "ontario_plots/CT_overall.pdf",
+    filename = "ontario-plots/CT-sa-compounds-sum.pdf",
     width = 8,
-    height = 8
+    height = 10
     )
 
 
+```
 
-##########      NOT STACKED ALL TOGETHER: OLD ORDER         ###############
+
+### Stand-alone content types per discipline
 
 
-df.overall.old.order <- bind_cols(df.overall, Overall = df.sa.type$Overall)
-ggplot(df.overall.old.order, aes(x=reorder(ContentType, Overall), y = Total)) +
-    geom_bar(stat="identity", width = .8, fill= "#2fbfc4", colour = "#2fbfc4") +
+```{r CT-discipline-sa, fig.height=4, fig.width=8}
+
+ggplot(df.sa.subject.sum, aes(x=reorder(Discipline, Total), y = Total)) +
+    geom_bar(stat="identity", width = .7, fill= "#2fbfc4", colour = "#2fbfc4") +
     coord_flip() +
     my_theme +
-    xlab("Content Types") +
+    xlab("Discipline") +
     ylab("Number of Content Types in the Ontario Repository") +
-    ggtitle("H5P Content Types (Stand-alone and Compounds) in the Ontario Repository,
-            ordered by the number of Stand-alone Content Types") +
-    geom_text(aes(label=Total), size=2.5, hjust=-0.5) +
+    ggtitle("H5P Stand Alone Content Types by Discipline in the Ontario Repository") +
+    geom_text(aes(label=Total), size=3, hjust=-0.3) +
     theme(plot.margin = margin(12,12,12,12)) +
     scale_x_discrete(expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+    scale_y_continuous(expand = expansion(mult = c(0, .055)))
 
-ggsave(
-    filename = "ontario_plots/CT_overall_old_order.pdf",
+ggsave(    
+    filename = "ontario-plots/CT-discipline-sa.pdf",
     width = 8,
-    height = 8
+    height = 4
+    )
+
+```
+
+
+### Disciplines with more than 30 Stand Alone Content Types
+
+The following data restricts the visualization only to disciplines with more then 30 stand alone content types. This reflects a limit of about 100 content types in total. (The only exception is Earth & Environment with 96 content types.)
+
+
+### All content types per discipline, stacked horizontal as SA, QS, CP and IV
+
+```{r CT-kind-30-disc-stack, fig.height=4, fig.width=8}
+
+ggplot(df.disc.30.long, aes(x=reorder(Discipline, Overall), y=N, fill=CT.Kind)) +
+  geom_bar(stat="identity", width = .8) +
+  coord_flip() + 
+  my_theme +
+  labs(x = "Discipline", 
+       y = "Number of Content Types",
+       title = "Content Types in Different Enviroments in the Ontario Repository",
+       fill = "Content Types"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =  c(
+    "in Course Presentation", 
+    "in Interactive Video",
+    "in Question Set", 
+    "Stand Alone")
+    ) +
+  guides(fill = guide_legend(reverse=TRUE)) +
+  # geom_text(aes(label=N), size=2.5, hjust = 1, colour = "white") +
+  geom_text(aes(y =label_y, label = N), size=3, check_overlap = TRUE) +
+  geom_text(aes(y= Overall, label=Overall), size=3.5, hjust=-0.4) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.06))) # coord_flip() reverses axis
+
+ggsave(    
+    filename = "ontario-plots/CT-kind-30-disc-stack.pdf",
+    width = 8,
+    height = 4
+    )
+
+```
+
+### All content types per discipline, stacked vertical as SA, QS, CP and IV (not displayed)
+
+```{r CT-30-kind-disc-stack, fig.height=6, fig.width=8, eval=FALSE}
+
+
+ggplot(df.disc.30.long, aes(x=Discipline, y=N, fill=CT.Kind)) +
+  geom_bar(stat="identity", width = .8) +
+  my_theme +
+  labs(x = "Discipline", 
+       y = "Number of Content Types",
+       title = "Content Types in Different Enviroments in the Ontario Repository",
+       fill = "Content Types"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        axis.text.x = element_text(angle=50,hjust=1),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =  c(
+    "in Course Presentation", 
+    "in Interactive Video",
+    "in Question Set", 
+    "Stand Alone")
+    ) +
+  guides(fill = guide_legend(reverse=TRUE)) +
+#  geom_label(aes(y =label_y, label = N), size=3, label.size = 0.5, colour = "white") +
+  geom_text(aes(y =label_y, label = N), size=3, check_overlap = TRUE) +
+  geom_text(aes(y= Overall, label=Overall), size=3.5, vjust=-0.6) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.07))) 
+
+
+ggsave(    
+    filename = "ontario-plots/CT-30-kind-disc-stack.pdf",
+    width = 8,
+    height = 6
+    )
+
+```
+
+
+### Kind of content types by discipline, dodged horizontal
+
+```{r CT-30-kind-disc-dodge, fig.height = 10, fig.width=8}
+
+ggplot(df.disc.30.long, aes(x=Discipline, y=N, fill=CT.Kind)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() + 
+  my_theme +
+  labs(x = "Discipline", 
+       y = "Number of Content Types",
+       title = "Different Categories of Content Types in the Ontario Repository",
+       fill = "Content Types"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =  c(
+    "in Course Presentation", 
+    "in Interactive Video",
+    "in Question Set", 
+    "Stand Alone")
+    ) +
+#  geom_text(aes(label=N), size=2.5, vjust = -4, hjust = 1) +
+  guides(fill = guide_legend(reverse=TRUE))  +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.07)))
+#  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) # coord_flip() reverses axis
+
+ggsave(    
+    filename = "ontario-plots/CT-30-kind-disc-dodge.pdf",
+    width = 8,
+    height = 10
+    )
+
+```
+
+
+### Kind of content types by discipline, proportional stacked horizontal
+
+```{r CT-30-kind-disc-prop, fig.height = 6, fig.width=8}
+
+df.disc.30.prop <- df.disc.30.long %>% 
+  group_by(Discipline) %>%
+  mutate(prop = (N / sum(N) * 100)) %>% 
+  mutate(label = cumsum(prop) - 0.5 * prop)
+  
+
+ggplot(df.disc.30.prop, aes(x=reorder(Discipline, Overall), y=prop, fill=CT.Kind)) +
+  geom_bar(stat="identity", position = "stack", width = .8) +
+  coord_flip() + 
+  my_theme +
+  labs(x = "Content Type", 
+       y = "Percentage of Content Types",
+       title = "Proportional Distribution of H5P Stand Alone Content Types, 
+       Question Sets, Course Presentations and Interactive Videos
+       in the Disciplines of the Ontario Repository",
+       fill = "Content Types"
+       ) +
+#  geom_text(aes(y=label_y, label=Overall), size=2.5, hjust = 1) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  scale_fill_discrete(labels =  c(
+    "in Course Presentation", 
+    "in Interactive Video",
+    "in Question Set", 
+    "Stand Alone")
+    ) +
+  geom_label(aes(y = label, label=sprintf("%.0f%%",prop)), size=4, label.size = 0.7, colour = "white") +
+  guides(fill = guide_legend(reverse=TRUE))
+#  scale_y_continuous(expand = expansion(mult = c(0, 0)))
+
+ggsave(    
+    filename = "ontario-plots/CT-30-kind-disc-prop.pdf",
+    width = 8,
+    height = 6
     )
 
 
+```
+
+### Number of content types per compounds QS, IV and CP
+
+```{r compounds-by-subject, fig.height = 4, fig.width=8}
+
+df.ct.in.compounds <- df.sa.subject %>% 
+  filter(ContentType == "Question Set" |
+         ContentType == "Interactive Video" |
+         ContentType == "Course Presentation") %>% 
+  bind_rows(df.QS.disc.total, df.CP.disc.total, df.IV.disc.total) %>% 
+  pivot_longer(!ContentType, names_to = "Discipline", values_to = "N") %>%
+  pivot_wider(names_from = ContentType, values_from = N) %>% 
+  filter(`Question Set` > 1) %>% # (not: Arts, History, Law, Literature & Philosophy)
+  mutate(QS.CT = QS.Total / `Question Set`) %>% 
+  mutate(CP.CT = CP.Total / `Course Presentation`) %>% 
+  mutate(IV.CT = IV.Total / `Interactive Video`) %>% 
+  mutate(across(where(is.double), round, 1))
+
+df.ct.in.compounds[2,1] <- "Computing"
+
+df.ct.total.compounds <- adorn_totals(df.ct.in.compounds, "row")
+
+#############################
+
+
+  
+
+# not necessary anymore as I have filtered those disciplines with division 0 = NaN
+#  replace_na(list(QS.CT=0, CP.CT=0, IV.CT=0))  
+
+# df.ct.in.compounds <- as.data.frame(t(df.ct.in.compounds)) %>% 
+#   row_to_names(row_number = 1)
+
+# CT.mean <- df.ct.in.compounds %>%
+#   summarise(across(where(is.numeric), mean)) %>% 
+#   rowid_to_column(var = "Discipline")
+# 
+# CT.mean$Discipline <- "Means"
+# 
+# df.ct.in.compounds <-  add_row(df.ct.in.compounds, CT.mean)
+
+
+
+
+
 
 ```
 
+```{r compounds-CTs-by-subject, fig.height = 4, fig.width=8, eval=FALSE}
+library(RColorBrewer)
+# display.brewer.all() # show all palettes
 
-```{r}
-sum(df.overall$Total)
+ggplot(df.ct.in.compounds, aes(y= `Question Set`, x= QS.Total, colour = Discipline)) +
+  geom_point(size = 4) +
+  theme(legend.position = "top") +
+  scale_colour_brewer(palette = "Paired")
+  
+ggplot(df.ct.in.compounds, aes(y= `Course Presentation`, x= CP.Total, colour = Discipline)) +
+  geom_point(size = 4) +
+  theme(legend.position = "top") +
+  scale_colour_brewer(palette = "Paired")
+
+ggplot(df.ct.in.compounds, aes(y= `Interactive Video`, x= IV.Total, colour = Discipline)) +
+  geom_point(size = 4) +
+  theme(legend.position = "top") +
+  scale_colour_brewer(palette = "Paired")
 ```
 
+
+### Scatterplot with number CT in number of compounds and mean
+
+```{r splot-compounds-CTs-avg-by-subject, fig.height = 5, fig.width=8}
+library(RColorBrewer)
+# display.brewer.all() # show all palettes
+
+ggplot(df.ct.in.compounds, 
+       aes(x = QS.CT, y = QS.Total, size = `Question Set`)) +
+  geom_point(shape = 21, colour = "black", fill="Gold") +
+  my_theme +
+  labs(x = "Average Number of Content Types per Question Set", 
+       y = "Number of Content Types in all Question Set per Discipline",
+       title = "Total Number of Content Types in all Question Sets 
+       and Average Number per one Question Set per Discipline"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top") +
+  scale_y_continuous(breaks = seq(0, 400, by = 25),
+      expand = expansion(mult = c(0.1, 0.1))) +
+  scale_x_continuous(breaks = seq(4, 9, by = .25)) +
+  scale_colour_brewer(palette = "Paired") +
+  scale_size() +
+  geom_text(aes(label=Discipline), size = 3, colour = "darkblue", vjust = -1.5) +
+  geom_text(aes(label=`Question Set`), size = 3.5, colour = "darkred", vjust = 2.2)
+
+ggsave(    
+    filename = "ontario-plots/compounds-QS-avg-by-subject.pdf",
+    width = 8,
+    height = 6
+    )
+
+ggplot(df.ct.in.compounds, 
+       aes(x = CP.CT, y = CP.Total, size = `Course Presentation`)) +
+  geom_point(shape = 21, colour = "black", fill="Khaki") +
+  my_theme +
+  labs(x = "Average Number of Content Types per Course Presentation", 
+       y = "Number of Content Types in all Course Presenetations per Discipline",
+       title = "Total Number of Content Types in all Course Presentations 
+       and Average Number per one Course Presentation per Discipline"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top") +
+  scale_y_continuous(breaks = seq(0, 160, by = 20),
+                     expand = expansion(mult = c(0.1, 0.1))) +
+  scale_x_continuous(breaks = seq(0, 5, by = .25)) +
+  scale_colour_brewer(palette = "Paired") +
+  scale_size() +
+  geom_text(aes(label=Discipline), size = 3, colour = "darkblue", vjust = -1.5) +
+  geom_text(aes(label=`Course Presentation`), size = 3.5, colour = "darkred", vjust = 2.2)
+
+ggsave(    
+    filename = "ontario-plots/compounds-CP-avg-by-subject.pdf",
+    width = 8,
+    height = 6
+    )
+
+ggplot(df.ct.in.compounds, 
+       aes(x = IV.CT, y = IV.Total, size = `Interactive Video`)) +
+  geom_point(shape = 21, colour = "black", fill="cornsilk") +
+  my_theme +
+  labs(x = "Average Number of Content Types per Interactive Video", 
+       y = "Number of Content Types in all Interactive Videos per Discipline",
+       title = "Total Number of Content Types in all Interactive Videos 
+       and Average Number per one Interactive Video per Discipline"
+       ) +
+  theme(plot.margin = margin(12,12,12,12),
+        legend.position = "top") +
+  coord_cartesian(ylim = c(0,100)) +
+  scale_x_continuous(breaks = seq(0, 5, by = .25)) +
+  scale_colour_brewer(palette = "Paired") +
+  scale_size() +
+  geom_text(aes(label=Discipline), size = 3, colour = "darkblue", vjust = -1.5) +
+  geom_text(aes(label=`Interactive Video`), size = 3.5, colour = "darkred", vjust = 2.2)
+
+ggsave(    
+    filename = "ontario-plots/compounds-IV-avg-by-subject.pdf",
+    width = 8,
+    height = 6
+    )
+
+
+```

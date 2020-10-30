@@ -5,3 +5,15 @@ stand-alone-distribution-of-h5p-content-types
 distribution-in-course-presentations
 add-compounds
 display-and-save-plots
+content-types-per-count
+stand-alone-content-types-with-sums-ordered-by-count
+all-content-types-with-sums-ordered-by-count-of-stand-alones
+stand-alone-and-compounds-content-types-with-sums-ordered-by-count
+stand-alone-content-types-per-discipline
+disciplines-with-more-than-30-stand-alone-content-types
+all-content-types-per-discipline-stacked-horizontal-as-sa-qs-cp-and-iv
+all-content-types-per-discipline-stacked-vertical-as-sa-qs-cp-and-iv-not-displayed
+kind-of-content-types-by-discipline-dodged-horizontal
+kind-of-content-types-by-discipline-proportional-stacked-horizontal
+number-of-content-types-per-compounds-qs-iv-and-cp
+scatterplot-with-number-ct-in-number-of-compounds-and-mean
